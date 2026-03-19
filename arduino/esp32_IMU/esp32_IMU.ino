@@ -7,6 +7,14 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
+#include <Arduino.h>
+
+hw_timer_t *timer = nullptr;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+volatile bool flagCall = false;
+
+int Hz = 100;
+
 #define IMU_ADDRESS 0x68
 MPU6500 IMU;
 
@@ -19,10 +27,25 @@ BLECharacteristic *pCharacteristic;
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
-void setup() {
+int sample = 0;
 
-  Serial.begin(115200);
+void IRAM_ATTR onTimer() {
+  portENTER_CRITICAL_ISR(&timerMux);
+  flagCall = true;
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
 
+int freqToMicros(int Hz) {
+  return 1.0 / Hz * 1000000;
+}
+
+void setupTimer() {
+  timer = timerBegin(1000000);
+  timerAttachInterrupt(timer, &onTimer);
+  timerAlarm(timer, freqToMicros(Hz), true, 0);
+}
+
+void setupIMU() {
   // IMU setup
   Wire.begin();
   Wire.setClock(400000);
@@ -34,7 +57,9 @@ void setup() {
   }
 
   Serial.println("IMU ready");
+}
 
+void setupBLE() {
   // BLE setup
   BLEDevice::init("BLE Server Example");
 
@@ -58,34 +83,48 @@ void setup() {
   pAdvertising->setMinPreferred(0x06);  // helps with iPhone compatibility
   pAdvertising->setMinPreferred(0x12);
 
-BLEDevice::startAdvertising();
+  BLEDevice::startAdvertising();
 
   Serial.println("BLE ready and Advertising...");
 }
 
-void loop() {
+void setup() {
+  Serial.begin(115200);
 
+  setupTimer();
+  setupIMU();
+  setupBLE();
+}
+
+void sendIMU() {
   IMU.update();
 
   IMU.getAccel(&accelData);
   IMU.getGyro(&gyroData);
 
   char buffer[120];
-  unsigned long t = millis();
 
   sprintf(buffer,"%lu,%f,%f,%f,%f,%f,%f",
-      t,
-      accelData.accelX,
-      accelData.accelY,
-      accelData.accelZ,
-      gyroData.gyroX,
-      gyroData.gyroY,
-      gyroData.gyroZ);
+    sample++,
+    accelData.accelX,
+    accelData.accelY,
+    accelData.accelZ,
+    gyroData.gyroX,
+    gyroData.gyroY,
+    gyroData.gyroZ);
 
   Serial.println(buffer);   // still print locally
 
   pCharacteristic->setValue(buffer);
   pCharacteristic->notify();
+}
 
-  delay(50);
+void loop() {
+  if (flagCall) {
+    portENTER_CRITICAL(&timerMux);
+    flagCall = false;
+    portEXIT_CRITICAL(&timerMux);
+
+    sendIMU();
+  }
 }
