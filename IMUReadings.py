@@ -8,6 +8,8 @@ CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"  # Your characteristic UUID
 DEVICE_NAME = "BLE Server Example"
 
 class IMUReader:
+    _current_reader = None
+
     def __init__(self):
 
         self.columns = ["timestamp", "x_accel", "y_accel", "z_accel", "x_gyro", "y_gyro", "z_gyro"]
@@ -22,6 +24,20 @@ class IMUReader:
         self._running = False
         self._connected_event = threading.Event()
         self._failed_event = threading.Event()
+        IMUReader._current_reader = self
+
+    @staticmethod
+    async def notification_handler(sender, data: bytearray):
+        if not IMUReader._current_reader._running:
+            return
+        try:
+            row = dict(zip(IMUReader._current_reader.columns, map(float, data.decode("utf-8").strip().split(","))))
+
+            with IMUReader._current_reader._lock:
+                IMUReader._current_reader.newData.loc[len(IMUReader._current_reader.newData)] = row
+
+        except Exception as e:
+            print("Read error:", e)
 
     async def connect(self):
         devices = await BleakScanner.discover()
@@ -43,17 +59,12 @@ class IMUReader:
         self._connected_event.set()
         print(f"Connected to {target.name} ({target.address})")
 
+        await self.client.start_notify(CHAR_UUID, IMUReader.notification_handler)
+        print("Set notification handler for BLE characteristic")
+
     async def pollingLoop(self):
         while self._running:
-            try:
-                data = await self.client.read_gatt_char(CHAR_UUID)
-                row = dict(zip(self.columns, map(float, data.decode("utf-8").strip().split(","))))
-
-                with self._lock:
-                    self.newData.loc[len(self.newData)] = row
-
-            except Exception as e:
-                print("Read error:", e)
+            await asyncio.sleep(0.001)
 
     async def _runner(self):
         try:
