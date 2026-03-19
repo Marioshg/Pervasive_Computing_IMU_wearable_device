@@ -47,11 +47,6 @@ class IMUReader:
         while self._running:
             try:
                 data = await self.client.read_gatt_char(CHAR_UUID)
-                # convert bytes to string if your STM32 sends ASCII CSV
-                # line = data.decode('utf-8').strip()
-                # values = [float(x) for x in line.split(',')]
-
-                columns = ["timestamp", "x_accel", "y_accel", "z_accel", "x_gyro", "y_gyro", "z_gyro"]
                 row = dict(zip(self.columns, map(float, data.decode("utf-8").strip().split(","))))
 
                 with self._lock:
@@ -59,7 +54,6 @@ class IMUReader:
 
             except Exception as e:
                 print("Read error:", e)
-
 
     async def _runner(self):
         try:

@@ -14,6 +14,7 @@ def generateGestures():
 		"look_down": "Rotate your head down in a {speed} movement{ret}",
 		"tilt_left": "Tilt your head left in a {speed} movement{ret}",
 		"tilt_right": "Tilt your head right in a {speed} movement{ret}",
+
 		"shake_leftright": "look left, then right in a {speed} movement{ret}",
 		"shake_rightleft": "look right, then left in a {speed} movement{ret}",
 		"behind_left": "Look behind you in a {speed} leftwards motion{ret}",
