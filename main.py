@@ -123,14 +123,17 @@ class Recorder:
 
 	def _gesture(self, duration):
 		startTime = time.time()
+		self.dataSource.clearData()
 
 		columnLabels = ["timestamp", "x_accel", "y_accel", "z_accel", "x_gyro", "y_gyro", "z_gyro"]
 		imu_df = pd.DataFrame(columns=columnLabels)
 
 		# Loop for self.duration seconds
 		while time.time() <= startTime + duration:
-			newData = self.dataSource()
-			imu_df = pd.concat([imu_df, newData], ignore_index=True)
+			newData = self.dataSource.getData()
+			if not newData.empty:
+				imu_df = newData.copy() if imu_df.empty else pd.concat([imu_df, newData], ignore_index=True)
+			# imu_df = pd.concat([imu_df, newData], ignore_index=True)
 			self._printProgressBar(time.time() - startTime, duration)
 
 		print(f"\n\tCollected {len(imu_df.index)} samples")
@@ -150,13 +153,13 @@ class Recorder:
 
 if __name__ == "__main__":
 	# Connect with the BLE server and start polling for data
-	imu = IMUReader(poll_interval=0.001)
+	imu = IMUReader()
 	imu.start()
-	time.sleep(1.0)
+	imu.wait_until_connected()
 
 	# Open the gestures
 	gestureDict = json.load(open("gestures.json"))
 
 	# configure and run the recorder
-	r = Recorder(user="user1", gestures=gestureDict, dataSource=imu.get_new_data)
+	r = Recorder(user="user1", gestures=gestureDict, dataSource=imu)
 	r.run()

@@ -8,16 +8,20 @@ CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"  # Your characteristic UUID
 DEVICE_NAME = "BLE Server Example"
 
 class IMUReader:
-    def __init__(self, poll_interval=0.1):
-        self.newData = []
+    def __init__(self):
+
+        self.columns = ["timestamp", "x_accel", "y_accel", "z_accel", "x_gyro", "y_gyro", "z_gyro"]
+        self.newData = pd.DataFrame(columns=self.columns)
+
         self.client = None
-        self.interval = poll_interval
 
         self._lock = threading.Lock()
 
         self._thread = None
         self._loop = None
         self._running = False
+        self._connected_event = threading.Event()
+        self._failed_event = threading.Event()
 
     async def connect(self):
         devices = await BleakScanner.discover()
@@ -36,6 +40,7 @@ class IMUReader:
         if not self.client.is_connected:
             raise RuntimeError("Failed to connect")
 
+        self._connected_event.set()
         print(f"Connected to {target.name} ({target.address})")
 
     async def pollingLoop(self):
@@ -47,22 +52,21 @@ class IMUReader:
                 # values = [float(x) for x in line.split(',')]
 
                 columns = ["timestamp", "x_accel", "y_accel", "z_accel", "x_gyro", "y_gyro", "z_gyro"]
-                df = pd.DataFrame([dict(zip(columns, map(float, data.decode("utf-8").strip().split(","))))])
-                print(df)
+                row = dict(zip(self.columns, map(float, data.decode("utf-8").strip().split(","))))
 
                 with self._lock:
-                    self.newData.append(df)
+                    self.newData.loc[len(self.newData)] = row
 
             except Exception as e:
                 print("Read error:", e)
 
-            # await asyncio.sleep(self.poll_interval)
 
     async def _runner(self):
         try:
             await self.connect()
             await self.pollingLoop()
         finally:
+            self._failed_event.set()
             if self.client is not None and self.client.is_connected:
                 await self.client.disconnect()
                 print("Disconnected")
@@ -76,19 +80,24 @@ class IMUReader:
             self._loop.close()
             self._loop = None
 
-    def get_new_data(self):
+    def getData(self):
         """
         Return all samples collected since the last call, and clear the buffer.
         """
         with self._lock:
-            data = self.newData[:]
-            self.newData.clear()
+            data = self.newData.copy()
+            self.newData = pd.DataFrame(columns=self.columns)
         return data
+
+    def clearData(self):
+        self.newData = pd.DataFrame(columns=self.columns)
 
     def start(self):
         if self._running:
             return
 
+        self._failed_event.clear()
+        self._connected_event.clear()
         self._running = True
         self._thread = threading.Thread(target=self._thread_main, daemon=True)
         self._thread.start()
@@ -99,19 +108,25 @@ class IMUReader:
             self._thread.join(timeout=2.0)
             self._thread = None
 
-    # Blocking wrapper so you can just call it
-    def startBlocking(self):
-        asyncio.run(self.connect())
-        # asyncio.run(self.readIMU())
+    def wait_until_connected(self, timeout=5.0):
+        while True:
+            if self._connected_event.wait(timeout=timeout):
+                return True
+            if self._failed_event.is_set():
+                raise RuntimeError(f"BLE connection failed")
+            if timeout is not None:
+                timeout -= 0.05
+                if timeout <= 0:
+                    return False
 
 if __name__ == "__main__":
-    imu = IMUReader(poll_interval=0.01)
+    imu = IMUReader()
     imu.start()
 
     try:
         while True:
             time.sleep(1.0)
-            samples = imu.get_new_data()
+            samples = imu.getData()
             if samples:
                 print(f"Got {len(samples)} new samples")
                 print("Latest sample:", samples[-1])
