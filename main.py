@@ -5,6 +5,8 @@ import numpy as np
 from pathlib import Path
 import json
 
+from IMUReadings import IMUReader
+
 def get_highest_run(folder, gesture):
 	"""
 	Looks through existing files and returns the highest run number of a specific gesture
@@ -146,12 +148,15 @@ class Recorder:
 		data.to_csv(fileName, index=False, float_format="%.4f")
 
 
-# Open the gestures
-gestureDict = json.load(open("gestures.json"))
+if __name__ == "__main__":
+	# Connect with the BLE server and start polling for data
+	imu = IMUReader(poll_interval=0.001)
+	imu.start()
+	time.sleep(1.0)
 
-# Configure the data source
-dummyDataGenerator = DummyData()
+	# Open the gestures
+	gestureDict = json.load(open("gestures.json"))
 
-# configure and run the recorder
-r = Recorder(user="user1", gestures=gestureDict, dataSource=dummyDataGenerator.getData)
-r.run()
+	# configure and run the recorder
+	r = Recorder(user="user1", gestures=gestureDict, dataSource=imu.get_new_data)
+	r.run()
