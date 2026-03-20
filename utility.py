@@ -62,10 +62,10 @@ class DataOrganiser:
 		# 	print(f"\t{gesture} has been recorded {len(self.recordingDictByGesture[gesture])} times")
 
 
+def combineClasses(dictByGesture):
+	newDict = {}
 
-class Combinator:
-	def __init__(self):
-		pass
+
 
 if __name__ == "__main__":
 	d = DataOrganiser("data")
