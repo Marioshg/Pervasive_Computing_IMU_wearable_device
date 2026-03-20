@@ -52,22 +52,26 @@ class DataOrganiser:
 		print(f"Got a total of {len(self.recordingList)} recordings "
 		      f"of {len(self.recordingDictByGesture)} different gestures "
 		      f"by {len(self.recordingDictByUser)} different users")
-		print()
 
 		print(f"Breakdown per user:")
 		for user in self.recordingDictByUser:
 			print(f"\t{user} has: {len(self.recordingDictByUser[user])} recordings of {len(sortByGesture(self.recordingDictByUser[user]))} unique gestures")
 		print()
-		print(f"Breakdown per gesture")
-		for gesture in self.recordingDictByGesture:
-			print(f"\t{gesture} has been recorded {len(self.recordingDictByGesture[gesture])} times")
+		# print(f"Breakdown per gesture")
+		# for gesture in self.recordingDictByGesture:
+		# 	print(f"\t{gesture} has been recorded {len(self.recordingDictByGesture[gesture])} times")
+
+
+
+class Combinator:
+	def __init__(self):
+		pass
 
 if __name__ == "__main__":
 	d = DataOrganiser("data")
-
-	print(f"List of recordings: {d.recordingList}")
-	print(f"Dict of recordings by user: {d.recordingDictByUser}")
-	print(f"Dict of recordings by gesture: {d.recordingDictByGesture}")
+	# print(f"List of recordings: {d.recordingList}")
+	# print(f"Dict of recordings by user: {d.recordingDictByUser}")
+	# print(f"Dict of recordings by gesture: {d.recordingDictByGesture}")
 
 	d.printInfo()
 
