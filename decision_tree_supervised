@@ -1,0 +1,181 @@
+# imu_decision_tree.py
+
+import os
+import pandas as pd
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
+
+
+
+# --- CONFIG ---
+DATA_FOLDER = "data/Marios"
+N_COMPONENTS = 5   # PCA components
+TEST_SIZE = 0.2
+
+# --- 1. DEFINE YOUR TRUE LABELS ---
+GESTURE_KEYWORDS = {
+    "look_left": ["left"],
+    "look_right": ["right"],
+    "look_up": ["up"],
+    "look_down": ["down"],
+    "tilt_left": ["tilt_left"],
+    "tilt_right": ["tilt_right"],
+    "nod": ["nod"],
+    "shake": ["shake"],
+    "idle": ["idle"],
+    "walk": ["walk"],
+    "jump": ["jump"],
+    "sit_down": ["sit"],
+    "get_up": ["get_up"],
+}
+
+def get_label_from_filename(filename):
+    name = filename.lower()
+
+    for label, keywords in GESTURE_KEYWORDS.items():
+        for kw in keywords:
+            if kw in name:
+                return label
+            else:
+                return "Unkown"
+
+    return None  # unknown
+
+# --- 1. FEATURE EXTRACTION ---
+def extract_features(df):
+    features = {}
+
+     # Drop timestamp column
+    #df = df.drop(columns=["timestamp"])
+
+    # Convert to numeric safely
+    df = df.apply(pd.to_numeric, errors="coerce").dropna()
+
+    # Drop timestamp
+    df = df.iloc[:, 1:]
+
+    # Mean
+    features.update(df.mean().add_prefix("mean_").to_dict())
+
+    # Std
+    features.update(df.std().add_prefix("std_").to_dict())
+
+    # Min / Max
+    features.update(df.min().add_prefix("min_").to_dict())
+    features.update(df.max().add_prefix("max_").to_dict())
+
+    # velocity / dynamics
+    features["accel_magnitude_mean"] = np.sqrt((df**2).sum(axis=1)).mean()
+
+    # change over time
+    features["accel_diff_mean"] = df.diff().abs().mean().mean()
+
+    # gyro energy (very useful for gestures)
+    features["gyro_energy"] = (df.iloc[:, 3:]**2).sum().sum()
+
+    return features
+
+
+# --- 2. LOAD DATA ---
+X = []
+y = []
+
+for file in os.listdir(DATA_FOLDER):
+    if not file.endswith(".csv"):
+        continue
+
+    label = get_label_from_filename(file)
+
+    if label is None:
+        print(f"Skipping {file} (no label match)")
+        continue
+
+    filepath = os.path.join(DATA_FOLDER, file)
+
+    try:
+        df = pd.read_csv(filepath, header=None)
+
+        # Skip bad files
+        if df.shape[1] != 7:
+            print(f"Skipping {file} (wrong format)")
+            continue
+        window_size = 50
+        step = 25
+        for i in range(0, len(df) - window_size, step):
+            window = df.iloc[i:i+window_size]
+            features = extract_features(window)
+            
+            # Label = filename before last underscore
+            label = "_".join(file.split("_")[:-1])
+
+            X.append(features)
+            y.append(label)
+
+    except Exception as e:
+        print(f"Skipping {file}: {e}")
+
+# Convert to DataFrame
+X = pd.DataFrame(X)
+y = np.array(y)
+
+print(f"Loaded {len(X)} samples")
+
+
+# --- 3. SCALE FEATURES ---
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+
+# --- 4. PCA ---
+pca = PCA(n_components=N_COMPONENTS)
+X_pca = pca.fit_transform(X_scaled)
+
+print(f"PCA explained variance: {pca.explained_variance_ratio_}")
+
+
+# --- 5. TRAIN / TEST SPLIT ---
+X_train, X_test, y_train, y_test = train_test_split(
+    X_pca, y, test_size=TEST_SIZE, random_state=42, stratify=y
+)
+
+
+# --- 6. DECISION TREE ---
+#clf = RandomForestClassifier(
+#    n_estimators=100,
+#    max_depth=10,
+#    random_state=42
+#)
+#clf.fit(X_train, y_train)
+
+param_grid = {
+    "max_depth": [3, 5, 10,20],
+    "min_samples_split": [2, 5, 10,15,20]
+}
+
+grid = GridSearchCV(RandomForestClassifier(), param_grid, cv=3)
+grid.fit(X_train, y_train)
+
+print("Best params:", grid.best_params_)
+print("Best CV accuracy:", grid.best_score_)
+
+# --- 7. EVALUATION ---
+best_model = grid.best_estimator_
+y_pred = best_model.predict(X_test)
+
+print("\nAccuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+
+# --- 8. FEATURE IMPORTANCE (OPTIONAL) ---
+importances = best_model.feature_importances_
+print("\nFeature importance (PCA components):")
+for i, imp in enumerate(importances):
+    print(f"PC{i}: {imp:.3f}")
