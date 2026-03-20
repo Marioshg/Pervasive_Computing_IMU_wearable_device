@@ -3,7 +3,7 @@ import json
 def generateGestures():
 	defaultDuration = 3
 	fastDuration = 2
-	defaultRepeats = 3
+	defaultRepeats = 10
 	noPause = 0
 	defaultPause = 1
 

@@ -31,7 +31,7 @@ def getColour(colour, text):
 		"BLUE": '\033[94m',
 		"WHITE": '\033[0m',
 	}
-	return f"{colourDict[colour]}{text}{colourDict["WHITE"]}"
+	return f"{colourDict[colour]}{text}{colourDict['WHITE']}"
 
 class DummyData:
 	def __init__(self):
@@ -70,7 +70,7 @@ class Recorder:
 		# Create directory if it doesn't exist yet
 		os.makedirs(f"data/{self.user}", exist_ok=True)
 
-		print(f"Configured recorder for {getColour("GREEN", self.user)}")
+		print(f"Configured recorder for {getColour('GREEN', self.user)}")
 		print(f"Recording {len(self.gestures)} different gestures")
 
 	def run(self):
@@ -85,7 +85,7 @@ class Recorder:
 			repeats = gestureData["repeats"]
 			pauseTime = gestureData["pause"]
 
-			print(f"\r\n{getColour("GREEN", gesture)} gesture")
+			print(f"\r\n{getColour('GREEN', gesture)} gesture")
 			print(f"\t{instruction}")
 			print(f"\trepeats={repeats}, duration={duration}, pause={pauseTime}")
 			input("\tPress Enter to start")
@@ -96,7 +96,7 @@ class Recorder:
 
 			# Repeat self.repeats times
 			for repeat in range(1, repeats + 1):
-				print(f"{getColour("GREEN", "🟢")} {gesture} - {repeat}/{repeats}")
+				print(f"{getColour('GREEN', '🟢')} {gesture} - {repeat}/{repeats}")
 
 				data = self._gesture(duration)
 				data = self._processData(data)
@@ -114,7 +114,7 @@ class Recorder:
 		# Draw the progress bar
 		nBars = int((totalBars * current) / duration) + 1
 		nEmpty = totalBars - nBars
-		barStr = f"[{nBars * "█"}{nEmpty * " "}]"
+		barStr = f"[{nBars * '█'}{nEmpty * ' ' }]"
 
 		# Draw the timer
 		timerStr = f"{current if current <= duration else duration:.2f}s/{duration:.2f}s"
@@ -161,5 +161,5 @@ if __name__ == "__main__":
 	gestureDict = json.load(open("gestures.json"))
 
 	# configure and run the recorder
-	r = Recorder(user="user1", gestures=gestureDict, dataSource=imu)
+	r = Recorder(user="User", gestures=gestureDict, dataSource=imu)
 	r.run()
