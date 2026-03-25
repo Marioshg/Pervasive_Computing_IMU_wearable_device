@@ -40,16 +40,11 @@ def process_gesture(files: list[str]) -> list:
     for file in files:
         # get the signal, make sure its length is divisible by 100
         expected_size = 200 if 'fast' in file else 300
-        data = IMUSignal.from_file(file, expected_size=expected_size).signal
-        data = data.reset_index(drop=True)
-
-        # split it into batches of 100 samples
-        size = math.ceil(len(data) / 100)
-        data = np.array_split(data, size)
-
-        # flatten into a single entry for each window
-        data = [d.flatten() for d in data]
-        items += data
+        signal = IMUSignal.from_file(file, expected_size=expected_size)
+        
+        windowed = signal.get_raw_windows(100, 0, flatten=True)
+        
+        items += windowed.tolist()
     return items
 
 def process_gestures(data_files: dict) -> dict:
