@@ -37,6 +37,18 @@ class IMUSignal():
         self.signal = self.signal.reindex(complete_indices)
         self.signal = self.signal.interpolate()
         
+        
+    """Difference the gyroscope data"""
+    def diff_gyro(self):
+        cols = ['x_gyro', 'y_gyro', 'z_gyro']
+        self.signal[cols] = self.signal[cols].diff().fillna(0)
+    
+    """Normalize data based using z-score"""
+    def normalize(self):
+        self.signal = (self.signal - self.signal.mean()) / self.signal.std()
+    
+    """Window the data without window processing. If 'flatten' is False, it will return a list of shape (windowcount, windowsize, 6), 
+    otherwise it is (windowcount, windowsize * 6)"""
     def get_raw_windows(self, window_size, overlap, flatten=True):
         step = window_size - overlap
         
@@ -53,11 +65,19 @@ class IMUSignal():
         return self.signal.to_csv(filename, **kwargs)
         
 if __name__ == "__main__":
-    IMUSignal.from_file("./data/Marios/behind_left_1.csv")
-    IMUSignal.from_file("./data/Marios/get_up_7.csv")
-    IMUSignal.from_file("./data/Marios/walk_13.csv")
-    IMUSignal.from_file("./data/Marios/tilt_left_1.csv")
-    IMUSignal.from_file("./data/Marios/shake_leftright_1.csv")
-    IMUSignal.from_file("./data/Marios/music_beat_3.csv")
+    sig = IMUSignal.from_file("./data/Marios/behind_left_1.csv")
+    print(sig.length())
+    
+    print(sig.signal.head())
+    sig.diff_gyro()
+    print(sig.signal.head())    
+    sig.normalize()
+    print(sig.signal.head())
+    
+    # IMUSignal.from_file("./data/Marios/get_up_7.csv")
+    # IMUSignal.from_file("./data/Marios/walk_13.csv")
+    # IMUSignal.from_file("./data/Marios/tilt_left_1.csv")
+    # IMUSignal.from_file("./data/Marios/shake_leftright_1.csv")
+    # IMUSignal.from_file("./data/Marios/music_beat_3.csv")
     
     
