@@ -1,2 +1,6 @@
 confusion_matrix.png
 __pycache__/utility.cpython-39.pyc
+__pycache__/format_data.cpython-39.pyc
+.gitignore
+model.pkl
+__pycache__/imusignal.cpython-39.pyc
