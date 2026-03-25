@@ -11,13 +11,13 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
-
-
+from dtaidistance import dtw
+from sklearn.metrics import confusion_matrix
 
 # --- CONFIG ---
 DATA_FOLDER = "data/Marios"
 N_COMPONENTS = 5   # PCA components
-TEST_SIZE = 0.2
+TEST_SIZE = 0.3
 
 # --- 1. DEFINE YOUR TRUE LABELS ---
 GESTURE_KEYWORDS = {
@@ -48,37 +48,51 @@ def get_label_from_filename(filename):
 
     return None  # unknown
 
+def zero_crossings(x):
+    return ((x[:-1] * x[1:]) < 0).sum()
+
+
 # --- 1. FEATURE EXTRACTION ---
 def extract_features(df):
     features = {}
 
      # Drop timestamp column
     #df = df.drop(columns=["timestamp"])
-
+    
     # Convert to numeric safely
     df = df.apply(pd.to_numeric, errors="coerce").dropna()
 
     # Drop timestamp
     df = df.iloc[:, 1:]
 
-    # Mean
+   # --- BASIC STATS  ---
     features.update(df.mean().add_prefix("mean_").to_dict())
-
-    # Std
     features.update(df.std().add_prefix("std_").to_dict())
-
-    # Min / Max
     features.update(df.min().add_prefix("min_").to_dict())
     features.update(df.max().add_prefix("max_").to_dict())
 
-    # velocity / dynamics
-    features["accel_magnitude_mean"] = np.sqrt((df**2).sum(axis=1)).mean()
+
+    # Range (max - min)
+    features.update((df.max() - df.min()).add_prefix("range_").to_dict())
+
+    # Median
+    features.update(df.median().add_prefix("median_").to_dict())
+
+    # Absolute mean (useful for motion intensity)
+    features.update(df.abs().mean().add_prefix("absmean_").to_dict())
+
+    # magnitude (all axes together like you did)
+    features["accel_magnitude_mean"] = np.sqrt((df.iloc[:, :3]**2).sum(axis=1)).mean()
 
     # change over time
     features["accel_diff_mean"] = df.diff().abs().mean().mean()
 
-    # gyro energy (very useful for gestures)
-    features["gyro_energy"] = (df.iloc[:, 3:]**2).sum().sum()
+    # energy
+    features["accel_energy"] = (df.iloc[:, :3]**2).sum().sum()
+    features["gyro_energy"]  = (df.iloc[:, 3:]**2).sum().sum()
+
+    # zero crossings (keep if you defined it)
+    features["gyro_zero_cross"] = df.iloc[:, 3:].apply(zero_crossings).sum()
 
     return features
 
@@ -107,7 +121,7 @@ for file in os.listdir(DATA_FOLDER):
             print(f"Skipping {file} (wrong format)")
             continue
         window_size = 50
-        step = 25
+        step = 10
         for i in range(0, len(df) - window_size, step):
             window = df.iloc[i:i+window_size]
             features = extract_features(window)
@@ -134,15 +148,15 @@ X_scaled = scaler.fit_transform(X)
 
 
 # --- 4. PCA ---
-pca = PCA(n_components=N_COMPONENTS)
-X_pca = pca.fit_transform(X_scaled)
+#pca = PCA(n_components=N_COMPONENTS)
+#X_pca = pca.fit_transform(X_scaled)
 
-print(f"PCA explained variance: {pca.explained_variance_ratio_}")
+#print(f"PCA explained variance: {pca.explained_variance_ratio_}")
 
 
 # --- 5. TRAIN / TEST SPLIT ---
 X_train, X_test, y_train, y_test = train_test_split(
-    X_pca, y, test_size=TEST_SIZE, random_state=42, stratify=y
+    X_scaled, y, test_size=TEST_SIZE, random_state=42, stratify=y
 )
 
 
@@ -155,7 +169,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 #clf.fit(X_train, y_train)
 
 param_grid = {
-    "max_depth": [3, 5, 10,20],
+    "max_depth": [3, 5, 10,20, 30, 40 , 50],
     "min_samples_split": [2, 5, 10,15,20]
 }
 
@@ -172,6 +186,7 @@ y_pred = best_model.predict(X_test)
 print("\nAccuracy:", accuracy_score(y_test, y_pred))
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
+print(confusion_matrix(y_test, y_pred))
 
 
 # --- 8. FEATURE IMPORTANCE (OPTIONAL) ---
