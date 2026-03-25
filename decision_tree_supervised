@@ -3,6 +3,9 @@
 import os
 import pandas as pd
 import numpy as np
+from pathlib import Path
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -11,11 +14,12 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
-from dtaidistance import dtw
 from sklearn.metrics import confusion_matrix
+from utility import DataOrganiser
+from collections import Counter
 
 # --- CONFIG ---
-DATA_FOLDER = "data/Marios"
+DATA_FOLDER = "data"
 N_COMPONENTS = 5   # PCA components
 TEST_SIZE = 0.3
 
@@ -36,6 +40,63 @@ GESTURE_KEYWORDS = {
     "get_up": ["get_up"],
 }
 
+def normalize_label(label):
+    label = label.lower()
+
+    # Directional gestures
+    if "look_left" in label or "behind_left" in label:
+        return "look_left"
+
+    if "look_right" in label or "behind_right" in label:
+        return "look_right"
+
+    if "look_up" in label:
+        return "look_up"
+
+    if "look_down" in label:
+        return "look_down"
+
+    # Tilt
+    if "tilt_left" in label:
+        return "tilt_left"
+
+    if "tilt_right" in label:
+        return "tilt_right"
+
+    # Shake
+    if "shake" in label:
+        return "shake"
+
+    # Other gestures
+    if "nod" in label:
+        return "nod"
+
+    if "music_beat" in label:
+        return "music_beat"
+
+    if "look_around" in label:
+        return "look_around"
+
+    if "look_direction" in label:
+        return "look_direction"
+
+    if "idle" in label:
+        return "idle"
+
+    if "walk" in label:
+        return "walk"
+
+    if "jump" in label:
+        return "jump"
+
+    if "sit_down" in label:
+        return "sit_down"
+
+    if "get_up" in label:
+        return "get_up"
+
+    return label
+
 def get_label_from_filename(filename):
     name = filename.lower()
 
@@ -44,7 +105,7 @@ def get_label_from_filename(filename):
             if kw in name:
                 return label
             else:
-                return "Unkown"
+                return label
 
     return None  # unknown
 
@@ -55,9 +116,6 @@ def zero_crossings(x):
 # --- 1. FEATURE EXTRACTION ---
 def extract_features(df):
     features = {}
-
-     # Drop timestamp column
-    #df = df.drop(columns=["timestamp"])
     
     # Convert to numeric safely
     df = df.apply(pd.to_numeric, errors="coerce").dropna()
@@ -70,7 +128,6 @@ def extract_features(df):
     features.update(df.std().add_prefix("std_").to_dict())
     features.update(df.min().add_prefix("min_").to_dict())
     features.update(df.max().add_prefix("max_").to_dict())
-
 
     # Range (max - min)
     features.update((df.max() - df.min()).add_prefix("range_").to_dict())
@@ -101,72 +158,45 @@ def extract_features(df):
 X = []
 y = []
 
-for file in os.listdir(DATA_FOLDER):
-    if not file.endswith(".csv"):
-        continue
+d = DataOrganiser("data")
 
-    label = get_label_from_filename(file)
+for gesture, files in d.recordingDictByGesture.items():
+    for file in files:
 
-    if label is None:
-        print(f"Skipping {file} (no label match)")
-        continue
+        try:
+            df = pd.read_csv(file, header=None)
 
-    filepath = os.path.join(DATA_FOLDER, file)
+            # Skip bad files
+            if df.shape[1] != 7:
+                print(f"Skipping {file} (wrong format)")
+                continue
+            window_size = 50
+            step = 25
+            for i in range(0, len(df) - window_size, step):
+                window = df.iloc[i:i+window_size]
+                features = extract_features(window)
 
-    try:
-        df = pd.read_csv(filepath, header=None)
+                X.append(features)
+                y.append(normalize_label(gesture))
 
-        # Skip bad files
-        if df.shape[1] != 7:
-            print(f"Skipping {file} (wrong format)")
-            continue
-        window_size = 50
-        step = 10
-        for i in range(0, len(df) - window_size, step):
-            window = df.iloc[i:i+window_size]
-            features = extract_features(window)
-            
-            # Label = filename before last underscore
-            label = "_".join(file.split("_")[:-1])
-
-            X.append(features)
-            y.append(label)
-
-    except Exception as e:
-        print(f"Skipping {file}: {e}")
+        except Exception as e:
+            print(f"Skipping {file}: {e}")
 
 # Convert to DataFrame
 X = pd.DataFrame(X)
 y = np.array(y)
 
 print(f"Loaded {len(X)} samples")
-
+print("Label distribution:", Counter(y))
 
 # --- 3. SCALE FEATURES ---
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-
-# --- 4. PCA ---
-#pca = PCA(n_components=N_COMPONENTS)
-#X_pca = pca.fit_transform(X_scaled)
-
-#print(f"PCA explained variance: {pca.explained_variance_ratio_}")
-
-
 # --- 5. TRAIN / TEST SPLIT ---
 X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y, test_size=TEST_SIZE, random_state=42, stratify=y
 )
-
-
-# --- 6. DECISION TREE ---
-#clf = RandomForestClassifier(
-#    n_estimators=100,
-#    max_depth=10,
-#    random_state=42
-#)
-#clf.fit(X_train, y_train)
 
 param_grid = {
     "max_depth": [3, 5, 10,20, 30, 40 , 50],
@@ -186,11 +216,26 @@ y_pred = best_model.predict(X_test)
 print("\nAccuracy:", accuracy_score(y_test, y_pred))
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
-print(confusion_matrix(y_test, y_pred))
 
+# --- PRINT CONFUSION MATRIX ---
+cm = confusion_matrix(y_test, y_pred)
+labels = sorted(set(y_test))
 
-# --- 8. FEATURE IMPORTANCE (OPTIONAL) ---
-importances = best_model.feature_importances_
-print("\nFeature importance (PCA components):")
-for i, imp in enumerate(importances):
-    print(f"PC{i}: {imp:.3f}")
+plt.figure(figsize=(12,10))
+sns.heatmap(cm, 
+            xticklabels=labels, 
+            yticklabels=labels, 
+            annot=False, 
+            cmap="Blues")
+
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+
+plt.xticks(rotation=45)
+plt.yticks(rotation=0)
+
+plt.tight_layout()
+plt.savefig("confusion_matrix.png")
+plt.show()
+
