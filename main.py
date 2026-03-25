@@ -161,5 +161,5 @@ if __name__ == "__main__":
 	gestureDict = json.load(open("gestures.json"))
 
 	# configure and run the recorder
-	r = Recorder(user="taya", gestures=gestureDict, dataSource=imu)
+	r = Recorder(user="user", gestures=gestureDict, dataSource=imu)
 	r.run()
