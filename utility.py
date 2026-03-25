@@ -12,6 +12,11 @@ def getUsers(path="data"):
 	for (dirpath, dirnames, filenames) in walk(path):
 		f.extend(dirnames)
 		break
+	
+    # remove original sample data since it is not properly recorded
+	if 'sample_test' in f:
+		f.remove('sample_test')
+
 	return f
 
 def sortByGesture(recordings):
@@ -64,7 +69,29 @@ class DataOrganiser:
 
 def combineClasses(dictByGesture):
 	newDict = {}
-
+	baseGestures = [
+		"look_left",
+		"look_right",
+		"look_up",
+		"look_down",
+		"tilt_left",
+		"tilt_right",
+		"shake_leftright",
+		"shake_rightleft",
+		"behind_left",
+		"behind_right",
+		"nod",
+		"music_beat",
+		"look_around",
+		"look_direction",
+		"idle",
+		"walk",
+		"jump",
+		"sit_down",
+		"get_up",
+	]
+	for i in dictByGesture:
+		pass
 
 
 if __name__ == "__main__":
