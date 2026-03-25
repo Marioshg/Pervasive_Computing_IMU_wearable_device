@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 
 from IMUReadings import IMUReader
+from imusignal import IMUSignal
 
 def get_highest_run(folder, gesture):
 	"""
@@ -98,9 +99,11 @@ class Recorder:
 			for repeat in range(1, repeats + 1):
 				print(f"{getColour('GREEN', '🟢')} {gesture} - {repeat}/{repeats}")
 
-				data = self._gesture(duration)
-				data = self._processData(data)
-				self._saveData(gesture, startingRun + repeat, data)
+				signal = self._gesture(duration)
+
+				# TODO do enrichment in the IMUSignal class
+				enriched = self._processData(signal)
+				self._saveData(gesture, startingRun + repeat, enriched)
 
 				# Optional pause between recordings
 				if pauseTime > 0:
@@ -125,19 +128,18 @@ class Recorder:
 		startTime = time.time()
 		self.dataSource.clearData()
 
-		columnLabels = ["timestamp", "x_accel", "y_accel", "z_accel", "x_gyro", "y_gyro", "z_gyro"]
-		imu_df = pd.DataFrame(columns=columnLabels)
-
+		signal = IMUSignal()
+  
 		# Loop for self.duration seconds
 		while time.time() <= startTime + duration:
 			newData = self.dataSource.getData()
 			if not newData.empty:
-				imu_df = newData.copy() if imu_df.empty else pd.concat([imu_df, newData], ignore_index=True)
+				signal.append(newData)
 			# imu_df = pd.concat([imu_df, newData], ignore_index=True)
 			self._printProgressBar(time.time() - startTime, duration)
 
-		print(f"\n\tCollected {len(imu_df.index)} samples")
-		return imu_df
+		print(f"\n\tCollected {signal.length()} samples")
+		return signal
 
 
 	def _processData(self, data):
@@ -161,5 +163,5 @@ if __name__ == "__main__":
 	gestureDict = json.load(open("gestures.json"))
 
 	# configure and run the recorder
-	r = Recorder(user="taya", gestures=gestureDict, dataSource=imu)
+	r = Recorder(user="User", gestures=gestureDict, dataSource=imu)
 	r.run()
