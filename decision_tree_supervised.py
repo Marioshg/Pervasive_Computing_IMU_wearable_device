@@ -25,6 +25,7 @@ from format_data import get_data
 # --- CONFIG ---
 DATA_FOLDER = "data"
 TEST_SIZE = 0.4
+SAMPLE_SEED = 42
 
 # --- 1. DEFINE YOUR TRUE LABELS ---
 GESTURE_KEYWORDS = {
@@ -53,7 +54,7 @@ def normalise_label(label):
         for kw in keywords:
             if kw in name:
                 if true_label in ["tilt_left","tilt_right","shake","music_beat","look_around","look_direction","nod"]:
-                    return "unknown"
+                    return "none"
                 return true_label
 
     return None  # unknown
@@ -102,22 +103,12 @@ def extract_features(df):
 
     return features
 
-
 # --- 2. LOAD DATA ---
-
-#d = DataOrganiser("data")
-
-#all_files = []
-
-#for gesture, files in d.recordingDictByGesture.items():
-#    for file in files:
-#        all_files.append((file, gesture))
 
 # Load aggregated DataFrame using format_data.py
 df_all = get_data(DATA_FOLDER)
 
 #ASSIGN DIFFERENT RECORDINGS FOR TRAINING AND TESTING, INSTEAD OF SEQUENCIAL
-#train_files, test_files = train_test_split(all_files, test_size=0.4,random_state=42)
 # Separate features and labels
 X = df_all.drop("label", axis=1)
 y = df_all["label"].values
@@ -153,10 +144,6 @@ def process_files(file_list):
             print(f"Skipping {file}: {e}")
 
     return pd.DataFrame(X), np.array(y)
-
-# -- OBTAIN THE FEAUTURES FOR TRAINING AND TESTING SET---
-#X_train, y_train = process_files(train_files)
-#X_test, y_test = process_files(test_files)
 
 #-- MAKE THE TRAINIG SET HAVE AN EQUAL NUMBER OF SAMPLES BETWEEN ALL LABELS
 # FIND THE LABEL WITH THE LEAST AMOUT OF SAMPLES AND MAKE EACH OTHER LABEL HAVE THE SAME AMOUNT--
