@@ -102,6 +102,6 @@ if __name__ == "__main__":
     filename = "aggregated.csv"
     path = os.path.join(data_folder, filename)
     df = get_data(data_folder)
-    df.to_csv(path)
+    df.to_csv(path, index=False)
     print(f"Saved data to {path}")
     
