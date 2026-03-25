@@ -17,18 +17,18 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix
 from utility import DataOrganiser
 from collections import Counter
+from sklearn.utils import shuffle
 
 # --- CONFIG ---
 DATA_FOLDER = "data"
-N_COMPONENTS = 5   # PCA components
-TEST_SIZE = 0.3
+TEST_SIZE = 0.4
 
 # --- 1. DEFINE YOUR TRUE LABELS ---
 GESTURE_KEYWORDS = {
-    "look_left": ["left"],
-    "look_right": ["right"],
-    "look_up": ["up"],
-    "look_down": ["down"],
+    "look_left": ["look_left", "left", "behind_left"],
+    "look_right": ["look_right", "right", "behind_right"],
+    "look_up": ["look_up", "up"],
+    "look_down": ["look_down", "down"],
     "tilt_left": ["tilt_left"],
     "tilt_right": ["tilt_right"],
     "nod": ["nod"],
@@ -36,76 +36,20 @@ GESTURE_KEYWORDS = {
     "idle": ["idle"],
     "walk": ["walk"],
     "jump": ["jump"],
-    "sit_down": ["sit"],
-    "get_up": ["get_up"],
+    "sit_down": ["sit", "sit_down"],
+    "get_up": ["get_up", "stand", "stand_up"],
+    "music_beat": ["music_beat", "beat"],
+    "look_around": ["look_around", "around"],
+    "look_direction": ["look_direction", "direction"]
 }
 
-def normalize_label(label):
-    label = label.lower()
+def normalise_label(label):
+    name = label.lower()
 
-    # Directional gestures
-    if "look_left" in label or "behind_left" in label:
-        return "look_left"
-
-    if "look_right" in label or "behind_right" in label:
-        return "look_right"
-
-    if "look_up" in label:
-        return "look_up"
-
-    if "look_down" in label:
-        return "look_down"
-
-    # Tilt
-    if "tilt_left" in label:
-        return "tilt_left"
-
-    if "tilt_right" in label:
-        return "tilt_right"
-
-    # Shake
-    if "shake" in label:
-        return "shake"
-
-    # Other gestures
-    if "nod" in label:
-        return "nod"
-
-    if "music_beat" in label:
-        return "music_beat"
-
-    if "look_around" in label:
-        return "look_around"
-
-    if "look_direction" in label:
-        return "look_direction"
-
-    if "idle" in label:
-        return "idle"
-
-    if "walk" in label:
-        return "walk"
-
-    if "jump" in label:
-        return "jump"
-
-    if "sit_down" in label:
-        return "sit_down"
-
-    if "get_up" in label:
-        return "get_up"
-
-    return label
-
-def get_label_from_filename(filename):
-    name = filename.lower()
-
-    for label, keywords in GESTURE_KEYWORDS.items():
+    for true_label, keywords in GESTURE_KEYWORDS.items():
         for kw in keywords:
             if kw in name:
-                return label
-            else:
-                return label
+                return true_label
 
     return None  # unknown
 
@@ -155,13 +99,21 @@ def extract_features(df):
 
 
 # --- 2. LOAD DATA ---
-X = []
-y = []
 
 d = DataOrganiser("data")
 
+all_files = []
+
 for gesture, files in d.recordingDictByGesture.items():
     for file in files:
+        all_files.append((file, gesture))
+
+#ASSIGN DIFFERENT RECORDINGS FOR TRAINING AND TESTING, INSTEAD OF SEQUENCIAL
+train_files, test_files = train_test_split(all_files, test_size=0.4, random_state=42)
+
+def process_files(file_list):
+    X, y = [], []
+    for file, gesture in file_list:
 
         try:
             df = pd.read_csv(file, header=None)
@@ -177,26 +129,26 @@ for gesture, files in d.recordingDictByGesture.items():
                 features = extract_features(window)
 
                 X.append(features)
-                y.append(normalize_label(gesture))
+                y.append(normalise_label(gesture))
 
         except Exception as e:
             print(f"Skipping {file}: {e}")
 
-# Convert to DataFrame
-X = pd.DataFrame(X)
-y = np.array(y)
+    return pd.DataFrame(X), np.array(y)
 
-print(f"Loaded {len(X)} samples")
-print("Label distribution:", Counter(y))
+# -- OBTAIN THE FEAUTURES FOR TRAINING AND TESTING SET---
+X_train, y_train = process_files(train_files)
+X_test, y_test = process_files(test_files)
+feature_names = X_train.columns
+print("Number of features:", len(X_train.columns))
 
-# --- 3. SCALE FEATURES ---
+# --- SCALE THE FEATURES ---
 scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-# --- 5. TRAIN / TEST SPLIT ---
-X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y, test_size=TEST_SIZE, random_state=42, stratify=y
-)
+print(f"Loaded {len(X_train)} samples")
+print("Label distribution:", Counter(y_train))
 
 param_grid = {
     "max_depth": [3, 5, 10,20, 30, 40 , 50],
@@ -216,6 +168,20 @@ y_pred = best_model.predict(X_test)
 print("\nAccuracy:", accuracy_score(y_test, y_pred))
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
+
+# --PLOT FEAUTURE IMPORTANCE--
+
+importances = best_model.feature_importances_
+
+feat_imp = pd.Series(importances, index=feature_names)
+feat_imp = feat_imp.sort_values(ascending=False)
+
+print(feat_imp.head(20))
+plt.figure(figsize=(10,6))
+feat_imp.head(20).plot(kind="barh")
+plt.title("Top 20 Feature Importances")
+plt.gca().invert_yaxis()
+plt.show()
 
 # --- PRINT CONFUSION MATRIX ---
 cm = confusion_matrix(y_test, y_pred)

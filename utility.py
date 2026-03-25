@@ -12,6 +12,11 @@ def getUsers(path="data"):
 	for (dirpath, dirnames, filenames) in walk(path):
 		f.extend(dirnames)
 		break
+	
+    # remove original sample data since it is not properly recorded
+	if 'sample_test' in f:
+		f.remove('sample_test')
+
 	return f
 
 def sortByGesture(recordings):
