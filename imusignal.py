@@ -21,7 +21,7 @@ class IMUSignal():
         return instance        
     
     def append(self, data):
-        imu_df = data.copy() if self.signal.empty else pd.concat([imu_df, data], ignore_index=True)
+        self.signal = data.copy() if self.signal.empty else pd.concat([self.signal, data], ignore_index=True)
         
     def length(self):
         return len(self.signal.index)
