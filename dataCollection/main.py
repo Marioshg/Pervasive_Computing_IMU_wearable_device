@@ -71,7 +71,7 @@ class Recorder:
 		self.dataSource = dataSource
 
 		# Create directory if it doesn't exist yet
-		os.makedirs(f"../data/{self.user}", exist_ok=True)
+		os.makedirs(f"./data/{self.user}", exist_ok=True)
 
 		print(f"Configured recorder for {getColour('GREEN', self.user)}")
 		print(f"Recording {len(self.gestures)} different gestures")
@@ -103,9 +103,7 @@ class Recorder:
 
 				signal = self._gesture(duration)
 
-				# TODO do enrichment in the IMUSignal class
-				enriched = self._processData(signal)
-				self._saveData(gesture, startingRun + repeat, enriched)
+				self._saveData(gesture, startingRun + repeat, signal)
 
 				# Optional pause between recordings
 				if pauseTime > 0:
@@ -145,7 +143,7 @@ class Recorder:
 
 
 	def _saveData(self, gesture, number, data):
-		fileName = f"../data/{self.user}/{gesture}_{number}.csv"
+		fileName = f"./data/{self.user}/{gesture}_{number}.csv"
 
 		print(f"\tSaving {fileName}")
 		data.to_csv(fileName, index=False, float_format="%.4f")
@@ -158,8 +156,8 @@ if __name__ == "__main__":
 	imu.wait_until_connected()
 
 	# Open the gestures
-	gestureDict = json.load(open("gestures.json"))
+	gestureDict = json.load(open("./dataCollection/gestures.json"))
 
 	# configure and run the recorder
-	r = Recorder(user="User", gestures=gestureDict, dataSource=imu)
+	r = Recorder(user="Arturs", gestures=gestureDict, dataSource=imu)
 	r.run()
