@@ -65,14 +65,14 @@ def generateGestures():
 		}
 
 	# Save to JSON
-	with open("gestures.json", "w") as f:
+	with open("./dataCollection/gestures.json", "w") as f:
 		json.dump(gestureDict, f, indent=4)
 
 
 if __name__ == "__main__":
 	generateGestures()
 
-	f = open("gestures.json")
+	f = open("./dataCollection/gestures.json")
 	data =  json.load(f)
 
 	for i in data:
