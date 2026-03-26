@@ -24,7 +24,7 @@ from format_data import get_data
 
 # --- CONFIG ---
 DATA_FOLDER = "data"
-TEST_SIZE = 0.4
+TEST_SIZE = 0.2
 SAMPLE_SEED = 42
 
 # --- 1. DEFINE YOUR TRUE LABELS ---
@@ -75,7 +75,7 @@ def extract_features(df):
 
    # --- BASIC STATS  ---
     features.update(df.mean().add_prefix("mean_").to_dict())
-    #features.update(df.std().add_prefix("std_").to_dict())
+    features.update(df.std().add_prefix("std_").to_dict())
     features.update(df.min().add_prefix("min_").to_dict())
     features.update(df.max().add_prefix("max_").to_dict())
 
@@ -108,7 +108,6 @@ def extract_features(df):
 # Load aggregated DataFrame using format_data.py
 df_all = get_data(DATA_FOLDER)
 
-#ASSIGN DIFFERENT RECORDINGS FOR TRAINING AND TESTING, INSTEAD OF SEQUENCIAL
 # Separate features and labels
 X = df_all.drop("label", axis=1)
 y = df_all["label"].values
@@ -128,7 +127,7 @@ def process_files(file_list):
             df = pd.read_csv(file, header=None)
 
             # Skip bad files
-            if df.shape[1] != 7 or normalise_label(gesture) == "unknown":
+            if df.shape[1] != 7:
                 print(f"Skipping {file} (wrong format)")
                 continue
             window_size = 50
@@ -145,8 +144,22 @@ def process_files(file_list):
 
     return pd.DataFrame(X), np.array(y)
 
+#----COMMENT THIS IF YOU DONT WANT TO USE THIS FILES FEATURES---
+
+#d = DataOrganiser("data")
+#all_files = []
+#for gesture, files in d.recordingDictByGesture.items():
+#    for file in files: all_files.append((file, gesture))
+     #ASSIGN DIFFERENT RECORDINGS FOR TRAINING AND TESTING, INSTEAD OF SEQUENCIAL#
+#train_files, test_files = train_test_split(all_files, test_size=0.4,random_state=42)
+#X_train, y_train = process_files(train_files)
+#X_test, y_test = process_files(test_files)
+
+#-----#
+
 #-- MAKE THE TRAINIG SET HAVE AN EQUAL NUMBER OF SAMPLES BETWEEN ALL LABELS
 # FIND THE LABEL WITH THE LEAST AMOUT OF SAMPLES AND MAKE EACH OTHER LABEL HAVE THE SAME AMOUNT--
+# -- OBTAIN THE FEATURES FOR TRAINING AND TESTING SET---
 df = X_train.copy()
 df["label"] = y_train
 # Find smallest class
@@ -174,8 +187,8 @@ print("Label distribution:", Counter(y_train))
 print("Test:", Counter(y_test))
 
 param_grid = {
-    "max_depth": [3, 5],
-    "min_samples_split": [2]
+    "max_depth": [3, 5,],
+    "min_samples_split": [2, 4, 6, 8, 10]
 }
 
 grid = GridSearchCV(RandomForestClassifier(class_weight="balanced"), param_grid, cv=3)
