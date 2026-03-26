@@ -12,8 +12,8 @@ def getUsers(path="data"):
 	for (dirpath, dirnames, filenames) in walk(path):
 		f.extend(dirnames)
 		break
-	
-    # remove original sample data since it is not properly recorded
+
+	# remove original sample data since it is not properly recorded
 	if 'sample_test' in f:
 		f.remove('sample_test')
 
@@ -55,8 +55,8 @@ class DataOrganiser:
 
 	def printInfo(self):
 		print(f"Got a total of {len(self.recordingList)} recordings "
-		      f"of {len(self.recordingDictByGesture)} different gestures "
-		      f"by {len(self.recordingDictByUser)} different users")
+			  f"of {len(self.recordingDictByGesture)} different gestures "
+			  f"by {len(self.recordingDictByUser)} different users")
 
 		print(f"Breakdown per user:")
 		for user in self.recordingDictByUser:
@@ -66,32 +66,48 @@ class DataOrganiser:
 		# for gesture in self.recordingDictByGesture:
 		# 	print(f"\t{gesture} has been recorded {len(self.recordingDictByGesture[gesture])} times")
 
+class Mappings:
+	simpleMapping = {
+	'look_left': ['look_left', 'look_left_fast', 'look_left_fast_return', 'look_left_return'],
+	'tilt_left': ['tilt_left', 'tilt_left_fast', 'tilt_left_fast_return', 'tilt_left_return'],
+	'look_right': ['look_right', 'look_right_fast', 'look_right_fast_return', 'look_right_return'],
+	'tilt_right': ['tilt_right', 'tilt_right_fast', 'tilt_right_fast_return', 'tilt_right_return'],
+	'look_up': ['look_up', 'look_up_fast', 'look_up_fast_return', 'look_up_return'],
+	'look_down': ['look_down', 'look_down_fast', 'look_down_fast_return', 'look_down_return'],
+	'none': ['idle', 'behind_right_fast', 'music_beat', 'shake_leftright_fast_return', 'look_direction', 'sit_down',
+			 'behind_left', 'shake_leftright_return', 'behind_right_return', 'nod', 'behind_right_fast_return',
+			 'behind_left_return', 'behind_left_fast_return', 'get_up', 'behind_right', 'shake_rightleft_return',
+			 'shake_rightleft_fast', 'shake_leftright', 'look_around', 'shake_leftright_fast', 'jump',
+			 'shake_rightleft', 'walk', 'shake_rightleft_fast_return', 'behind_left_fast']
+	}
 
-# def combineClasses(dictByGesture):
-# 	newDict = {}
-# 	baseGestures = [
-# 		"look_left",
-# 		"look_right",
-# 		"look_up",
-# 		"look_down",
-# 		"tilt_left",
-# 		"tilt_right",
-# 		"shake_leftright",
-# 		"shake_rightleft",
-# 		"behind_left",
-# 		"behind_right",
-# 		"nod",
-# 		"music_beat",
-# 		"look_around",
-# 		"look_direction",
-# 		"idle",
-# 		"walk",
-# 		"jump",
-# 		"sit_down",
-# 		"get_up",
-# 	]
-# 	for i in dictByGesture:
-# 		pass
+	returnMapping = {
+		'look_left': ['look_left_fast_return', 'look_left_return'],
+		'tilt_left': ['tilt_left_fast_return', 'tilt_left_return'],
+		'look_right': ['look_right_fast_return', 'look_right_return'],
+		'tilt_right': ['tilt_right_fast_return', 'tilt_right_return'],
+		'look_up': ['look_up_fast_return', 'look_up_return'],
+		'look_down': ['look_down_fast_return', 'look_down_return'],
+		'none': ['idle', 'behind_right_fast', 'music_beat', 'shake_leftright_fast_return', 'look_direction', 'sit_down',
+				 'behind_left', 'shake_leftright_return', 'behind_right_return', 'nod', 'behind_right_fast_return',
+				 'behind_left_return', 'behind_left_fast_return', 'get_up', 'behind_right', 'shake_rightleft_return',
+				 'shake_rightleft_fast', 'shake_leftright', 'look_around', 'shake_leftright_fast', 'jump',
+				 'shake_rightleft', 'walk', 'shake_rightleft_fast_return', 'behind_left_fast']
+	}
+
+def remapGestures(recordingDictByGesture: dict, mapping: dict) -> dict:
+	'''
+	Provide a new dictionary that is joined on the given mapping
+	'''
+
+	new_data = {}
+	old_data = recordingDictByGesture
+	for label in mapping:
+		new_data[label] = []
+		old_labels = mapping[label]
+		for name in old_labels:
+			new_data[label] += (old_data[name])
+	return new_data
 
 
 if __name__ == "__main__":
@@ -108,4 +124,5 @@ if __name__ == "__main__":
 	# Get all the 'look_left' recordings
 	print(f"look_left recordings: {d.recordingDictByGesture['look_left']}")
 
-
+	reorder = remapGestures(d.recordingDictByGesture, Mappings.simpleMapping)
+	print(reorder.keys())
