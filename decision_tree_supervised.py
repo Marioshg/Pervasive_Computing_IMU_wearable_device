@@ -21,10 +21,11 @@ from utility import DataOrganiser
 from collections import Counter
 from sklearn.utils import shuffle
 from format_data import get_data
+from sklearn.feature_selection import SelectKBest, f_classif
 
 # --- CONFIG ---
 DATA_FOLDER = "data"
-TEST_SIZE = 0.2
+TEST_SIZE = 0.4
 SAMPLE_SEED = 42
 
 # --- 1. DEFINE YOUR TRUE LABELS ---
@@ -157,9 +158,10 @@ def process_files(file_list):
 
 #-----#
 
+# -- OBTAIN THE FEATURES FOR TRAINING AND TESTING SET---
+
 #-- MAKE THE TRAINIG SET HAVE AN EQUAL NUMBER OF SAMPLES BETWEEN ALL LABELS
 # FIND THE LABEL WITH THE LEAST AMOUT OF SAMPLES AND MAKE EACH OTHER LABEL HAVE THE SAME AMOUNT--
-# -- OBTAIN THE FEATURES FOR TRAINING AND TESTING SET---
 df = X_train.copy()
 df["label"] = y_train
 # Find smallest class
@@ -187,11 +189,15 @@ print("Label distribution:", Counter(y_train))
 print("Test:", Counter(y_test))
 
 param_grid = {
-    "max_depth": [3, 5,],
-    "min_samples_split": [2, 4, 6, 8, 10]
+    "max_depth": [3, 5,10, 20, 30, 40, 50],
+    "min_samples_split": [6, 10, 12, 16, 20]
 }
-
-grid = GridSearchCV(RandomForestClassifier(class_weight="balanced"), param_grid, cv=3)
+grid = GridSearchCV(
+    DecisionTreeClassifier(class_weight="balanced"),
+    param_grid,
+    cv=3
+)
+#grid = GridSearchCV(RandomForestClassifier(class_weight="balanced"), param_grid, cv=3)
 grid.fit(X_train, y_train)
 
 print("Best params:", grid.best_params_)

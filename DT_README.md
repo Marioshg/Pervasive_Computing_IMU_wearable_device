@@ -75,19 +75,42 @@ Best Hyperparameters
 
 - Acc: 0.65%
 - Memory Size: 424 KB
-- Cross-Validation Accuracy: 0.865
+- Cross-Validation Accuracy: 0.65
 
 ### Hyperparameters
 - max_depth = 5
 - min_samples_split = 2
 - F1 average: 0.65
 - F1 score per class: [0.76, 0.50, 0.48, 0.86, 0.25, 0.89, 0.82]
-- Weighted Avg F1: 0.87
+- Weighted Avg F1: 0.65
 
 ### Label Distribution
 - **Train:** 240 samples per class  80%
 - **Test:** 60 samples per class   20%
 
+## Alternative Solution
+
+Random Forest Takes a lot of space. Instead we use Decision Tree with the excact same parameters as the original RandomForest
+
+- Acc: 74%
+- Memory Size: 36 KB
+- Cross-Validation Accuracy: 0.72
+
+### Hyperparameters
+- max_depth = 40
+- min_samples_split = 2
+- F1 average: 0.73
+- F1 score per class: [0.89, 0.54, 0.62, 0.91, 0.42, 0.90, 0.85]
+- Weighted Avg F1: 0.73
+
+### Label Distribution
+- **Train:** 180 samples per class  60%
+- **Test:** 120 samples per class   40%
+
+## Results:
+
+
+
 ## Final Outcome:
 
-Even with Depth Reduction, the results are not promising. 
+Even with Depth Reduction, the results are not promising for the Forest Tree. But A decision Tree is the perfect balance between performance and Memory size.  
