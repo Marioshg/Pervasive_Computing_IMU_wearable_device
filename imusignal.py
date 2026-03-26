@@ -6,14 +6,15 @@ LABELS = ["timestamp", "x_accel", "y_accel", "z_accel", "x_gyro", "y_gyro", "z_g
 
 class IMUSignal():
     
-    """Initialize an empty IMU accelerometer XYZ + gyroscope XYZ signal"""
     def __init__(self):
+        """Initialize an empty IMU accelerometer XYZ + gyroscope XYZ signal"""        
         self.signal = pd.DataFrame(columns=LABELS)
         
     
-    """Import signal from file"""
     @classmethod
     def from_file(cls, file_csv, expected_size=300):
+        """Import signal from file"""
+        
         instance = cls()
         
         instance.signal = pd.read_csv(file_csv, header=0, index_col=0)
@@ -37,7 +38,19 @@ class IMUSignal():
         self.signal = self.signal.reindex(complete_indices)
         self.signal = self.signal.interpolate()
         
+        
+    def diff_gyro(self):
+        """Difference the gyroscope data"""
+        cols = ['x_gyro', 'y_gyro', 'z_gyro']
+        self.signal[cols] = self.signal[cols].diff().fillna(0)
+    
+    def normalize(self):
+        """Normalize data based using z-score"""
+        self.signal = (self.signal - self.signal.mean()) / self.signal.std()
+    
     def get_raw_windows(self, window_size, overlap, flatten=True):
+        """Window the data without window processing. If 'flatten' is False, it will return a list of shape (windowcount, windowsize, 6), 
+        otherwise it is (windowcount, windowsize * 6)"""
         step = window_size - overlap
         
         starts = np.arange(0, len(self.signal) - window_size + 1, step)
@@ -53,11 +66,19 @@ class IMUSignal():
         return self.signal.to_csv(filename, **kwargs)
         
 if __name__ == "__main__":
-    IMUSignal.from_file("./data/Marios/behind_left_1.csv")
-    IMUSignal.from_file("./data/Marios/get_up_7.csv")
-    IMUSignal.from_file("./data/Marios/walk_13.csv")
-    IMUSignal.from_file("./data/Marios/tilt_left_1.csv")
-    IMUSignal.from_file("./data/Marios/shake_leftright_1.csv")
-    IMUSignal.from_file("./data/Marios/music_beat_3.csv")
+    sig = IMUSignal.from_file("./data/Marios/behind_left_1.csv")
+    print(sig.length())
+    
+    print(sig.signal.head())
+    sig.diff_gyro()
+    print(sig.signal.head())    
+    sig.normalize()
+    print(sig.signal.head())
+    
+    # IMUSignal.from_file("./data/Marios/get_up_7.csv")
+    # IMUSignal.from_file("./data/Marios/walk_13.csv")
+    # IMUSignal.from_file("./data/Marios/tilt_left_1.csv")
+    # IMUSignal.from_file("./data/Marios/shake_leftright_1.csv")
+    # IMUSignal.from_file("./data/Marios/music_beat_3.csv")
     
     

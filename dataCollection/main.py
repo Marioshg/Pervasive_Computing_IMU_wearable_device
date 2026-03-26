@@ -6,7 +6,6 @@ from pathlib import Path
 import json
 
 from IMUReadings import IMUReader
-from imusignal import IMUSignal
 
 def get_highest_run(folder, gesture):
 	"""
@@ -55,6 +54,9 @@ class DummyData:
 
 		return pd.DataFrame(dummyData)
 
+	def clearData(self):
+		return
+
 
 class Recorder:
 	def __init__(self, user, gestures, dataSource):
@@ -69,7 +71,7 @@ class Recorder:
 		self.dataSource = dataSource
 
 		# Create directory if it doesn't exist yet
-		os.makedirs(f"data/{self.user}", exist_ok=True)
+		os.makedirs(f"../data/{self.user}", exist_ok=True)
 
 		print(f"Configured recorder for {getColour('GREEN', self.user)}")
 		print(f"Recording {len(self.gestures)} different gestures")
@@ -128,26 +130,22 @@ class Recorder:
 		startTime = time.time()
 		self.dataSource.clearData()
 
-		signal = IMUSignal()
+		LABELS = ["timestamp", "x_accel", "y_accel", "z_accel", "x_gyro", "y_gyro", "z_gyro"]
+		signal = pd.DataFrame(columns=LABELS)
   
 		# Loop for self.duration seconds
 		while time.time() <= startTime + duration:
 			newData = self.dataSource.getData()
-			if not newData.empty:
-				signal.append(newData)
+			signal = newData.copy() if signal.empty else pd.concat([signal, newData], ignore_index=True)
 			# imu_df = pd.concat([imu_df, newData], ignore_index=True)
 			self._printProgressBar(time.time() - startTime, duration)
 
-		print(f"\n\tCollected {signal.length()} samples")
+		print(f"\n\tCollected {len(signal.index)} samples")
 		return signal
 
 
-	def _processData(self, data):
-		# TODO: Enrich data (Add extra fields as desired e.g total, average
-		return data
-
 	def _saveData(self, gesture, number, data):
-		fileName = f"data/{self.user}/{gesture}_{number}.csv"
+		fileName = f"../data/{self.user}/{gesture}_{number}.csv"
 
 		print(f"\tSaving {fileName}")
 		data.to_csv(fileName, index=False, float_format="%.4f")
@@ -163,6 +161,5 @@ if __name__ == "__main__":
 	gestureDict = json.load(open("gestures.json"))
 
 	# configure and run the recorder
-
 	r = Recorder(user="User", gestures=gestureDict, dataSource=imu)
 	r.run()
