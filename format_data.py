@@ -32,7 +32,7 @@ def join_on_mapping(organiser: DataOrganiser, mapping: dict) -> dict:
             new_data[label] += (old_data[name])
     return new_data
 
-def process_gesture(files: list[str]) -> list:
+def process_gesture(files: list[str], raw, window_size, overlap) -> list:
     '''
     Process a single gesture; expects a list of CSV files
     '''
@@ -42,16 +42,19 @@ def process_gesture(files: list[str]) -> list:
         expected_size = 200 if 'fast' in file else 300
         signal = IMUSignal.from_file(file, expected_size=expected_size)
         
-        windowed = signal.get_raw_windows(100, 0, flatten=True)
+        if raw:
+            windowed = signal.get_raw_windows(window_size, overlap, flatten=True)
+        else:
+            windowed = signal.get_feature_windows(window_size, overlap)
         
         items += windowed.tolist()
     return items
 
-def process_gestures(data_files: dict) -> dict:
+def process_gestures(data_files: dict, raw, window_size, overlap) -> dict:
     data = {}
     length = None
     for gesture, files in data_files.items():
-        values = process_gesture(files)
+        values = process_gesture(files, raw, window_size, overlap)
         data[gesture] = values
         
         # keep the smallest number of samples
@@ -82,7 +85,7 @@ def build_dataframe(data: dict) -> pd.DataFrame:
 
     return df
 
-def get_data(data_folder: str) -> pd.DataFrame:
+def get_data(data_folder: str, raw=True, window_size=100, overlap=0) -> pd.DataFrame:
     organiser = DataOrganiser(data_folder)
     organiser.printInfo()
 
@@ -90,7 +93,7 @@ def get_data(data_folder: str) -> pd.DataFrame:
     data_files = join_on_mapping(organiser, mapping)
     print(f'Mapped found files to gestures')
 
-    gestures = process_gestures(data_files)
+    gestures = process_gestures(data_files, raw, window_size, overlap)
     df = None
     df = build_dataframe(gestures)
     print(f'Built data frame with {len(df)} entries from gesture data')
@@ -98,10 +101,14 @@ def get_data(data_folder: str) -> pd.DataFrame:
     return df
 
 if __name__ == "__main__":
+    window_size = 100
+    overlap = 25
+    raw = True
+    
     data_folder = "data"
-    filename = "aggregated.csv"
+    filename = f"aggregated{"_features" if not raw else "_raw"}_{window_size}_{overlap}.csv"
     path = os.path.join(data_folder, filename)
-    df = get_data(data_folder)
+    df = get_data(data_folder, raw, window_size, overlap)
     df.to_csv(path, index=False)
     print(f"Saved data to {path}")
     
