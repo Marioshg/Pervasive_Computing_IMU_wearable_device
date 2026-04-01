@@ -2,24 +2,18 @@
 
 import os
 import pandas as pd
-import numpy as np
-from pathlib import Path
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pickle
-import sys
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix
-from utility import DataOrganiser
 from collections import Counter
-from sklearn.utils import shuffle
 from format_data import get_data
 
 # --- CONFIG ---
@@ -27,90 +21,13 @@ DATA_FOLDER = "data"
 TEST_SIZE = 0.4
 SAMPLE_SEED = 42
 
-# --- 1. DEFINE YOUR TRUE LABELS ---
-GESTURE_KEYWORDS = {
-    "look_left": ["look_left", "left", "behind_left"],
-    "look_right": ["look_right", "right", "behind_right"],
-    "look_up": ["look_up", "up"],
-    "look_down": ["look_down", "down"],
-    "tilt_left": ["tilt_left"],
-    "tilt_right": ["tilt_right"],
-    "nod": ["nod"],
-    "shake": ["shake"],
-    "idle": ["idle"],
-    "walk": ["walk"],
-    "jump": ["jump"],
-    "sit_down": ["sit", "sit_down"],
-    "get_up": ["get_up", "stand", "stand_up"],
-    "music_beat": ["music_beat", "beat"],
-    "look_around": ["look_around", "around"],
-    "look_direction": ["look_direction", "direction"]
-}
-
-def normalise_label(label):
-    name = label.lower()
-
-    for true_label, keywords in GESTURE_KEYWORDS.items():
-        for kw in keywords:
-            if kw in name:
-                if true_label in ["tilt_left","tilt_right","shake","music_beat","look_around","look_direction","nod"]:
-                    return "none"
-                return true_label
-
-    return None  # unknown
-
-def zero_crossings(x):
-    return ((x[:-1] * x[1:]) < 0).sum()
-
-
-# --- 1. FEATURE EXTRACTION ---
-def extract_features(df):
-    features = {}
-    
-    # Convert to numeric safely
-    df = df.apply(pd.to_numeric, errors="coerce").dropna()
-
-    # Drop timestamp
-    df = df.iloc[:, 1:]
-
-   # --- BASIC STATS  ---
-    features.update(df.mean().add_prefix("mean_").to_dict())
-    #features.update(df.std().add_prefix("std_").to_dict())
-    features.update(df.min().add_prefix("min_").to_dict())
-    features.update(df.max().add_prefix("max_").to_dict())
-
-    # Range (max - min)
-    features.update((df.max() - df.min()).add_prefix("range_").to_dict())
-
-    # Median
-    features.update(df.median().add_prefix("median_").to_dict())
-
-    # Absolute mean (useful for motion intensity)
-    features.update(df.abs().mean().add_prefix("absmean_").to_dict())
-
-    # magnitude (all axes together like you did)
-    features["accel_magnitude_mean"] = np.sqrt((df.iloc[:, :3]**2).sum(axis=1)).mean()
-
-    # change over time
-    features["accel_diff_mean"] = df.diff().abs().mean().mean()
-
-    # energy
-    features["accel_energy"] = (df.iloc[:, :3]**2).sum().sum()
-    features["gyro_energy"]  = (df.iloc[:, 3:]**2).sum().sum()
-
-    # zero crossings (keep if you defined it)
-    features["gyro_zero_cross"] = df.iloc[:, 3:].apply(zero_crossings).sum()
-
-    return features
-
 # --- 2. LOAD DATA ---
 
 # Load aggregated DataFrame using format_data.py
-df_all = get_data(DATA_FOLDER)
+df_all = get_data(DATA_FOLDER, raw=False, window_size=100, overlap=25)
 
-#ASSIGN DIFFERENT RECORDINGS FOR TRAINING AND TESTING, INSTEAD OF SEQUENCIAL
 # Separate features and labels
-X = df_all.drop("label", axis=1)
+X = df_all.drop(columns=["label"])
 y = df_all["label"].values
 
 print(f"Total samples (after filtering unknowns): {len(df_all)}")
@@ -120,46 +37,22 @@ print("Label distribution:", df_all["label"].value_counts())
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=TEST_SIZE, stratify=y, random_state=SAMPLE_SEED
 )
-def process_files(file_list):
-    X, y = [], []
-    for file, gesture in file_list:
-
-        try:
-            df = pd.read_csv(file, header=None)
-
-            # Skip bad files
-            if df.shape[1] != 7 or normalise_label(gesture) == "unknown":
-                print(f"Skipping {file} (wrong format)")
-                continue
-            window_size = 50
-            step = 25
-            for i in range(0, len(df) - window_size, step):
-                window = df.iloc[i:i+window_size]
-                features = extract_features(window)
-
-                X.append(features)
-                y.append(normalise_label(gesture))
-
-        except Exception as e:
-            print(f"Skipping {file}: {e}")
-
-    return pd.DataFrame(X), np.array(y)
 
 #-- MAKE THE TRAINIG SET HAVE AN EQUAL NUMBER OF SAMPLES BETWEEN ALL LABELS
 # FIND THE LABEL WITH THE LEAST AMOUT OF SAMPLES AND MAKE EACH OTHER LABEL HAVE THE SAME AMOUNT--
-df = X_train.copy()
-df["label"] = y_train
-# Find smallest class
-min_count = df["label"].value_counts().min()
-# Balance dataset
-df_balanced = df.groupby("label", group_keys=False).apply(
-    lambda x: x.sample(min_count, random_state=42)
-)
-# Shuffle after balancing (IMPORTANT)
-df_balanced = df_balanced.sample(frac=1, random_state=42).reset_index(drop=True)
-# Split back
-X_train = df_balanced.drop("label", axis=1)
-y_train = df_balanced["label"].values
+# df = X_train.copy()
+# df["label"] = y_train
+# # Find smallest class
+# min_count = df["label"].value_counts().min()
+# # Balance dataset
+# df_balanced = df.groupby("label", group_keys=False).apply(
+#     lambda x: x.sample(min_count, random_state=42)
+# )
+# # Shuffle after balancing (IMPORTANT)
+# df_balanced = df_balanced.sample(frac=1, random_state=42).reset_index(drop=True)
+# # Split back
+# X_train = df_balanced.drop(columns=["label"])
+# y_train = df_balanced["label"].values
 
 feature_names = X_train.columns
 print("Number of features:", len(X_train.columns))
@@ -174,11 +67,15 @@ print("Label distribution:", Counter(y_train))
 print("Test:", Counter(y_test))
 
 param_grid = {
-    "max_depth": [3, 5],
-    "min_samples_split": [2]
+    "max_depth": [3, 5,10, 20, 30, 40, 50],
+    "min_samples_split": [6, 10, 12, 16, 20]
 }
-
-grid = GridSearchCV(RandomForestClassifier(class_weight="balanced"), param_grid, cv=3)
+grid = GridSearchCV(
+    DecisionTreeClassifier(class_weight="balanced"),
+    param_grid,
+    cv=3
+)
+#grid = GridSearchCV(RandomForestClassifier(class_weight="balanced"), param_grid, cv=3)
 grid.fit(X_train, y_train)
 
 print("Best params:", grid.best_params_)
