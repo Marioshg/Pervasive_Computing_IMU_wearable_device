@@ -1,0 +1,12 @@
+{
+    "application": "Thonny",
+    "gestures": {
+        "look_left": "H",
+        "look_right": "E",
+        "look_up": "L",
+        "look_down": "O",
+        "tilt_left": "W",
+        "tilt_right": "R",
+        "extra_value_to_complete_hello_world": "D"
+    }
+  }
