@@ -1,5 +1,5 @@
-from utility import DataOrganiser
-from imusignal import from_csv, get_feature_windows, get_raw_windows
+from dataPreprocessing.utility import DataOrganiser
+from dataPreprocessing.imusignal import from_csv, get_feature_windows, get_raw_windows
 
 import pandas as pd
 import numpy as np
@@ -104,7 +104,7 @@ def get_aggregate(data_folder: str, raw=True, window_size=100, overlap=0) -> pd.
 if __name__ == "__main__":
     window_size = 100
     overlap = 25
-    raw = True
+    raw = False
     
     data_folder = "data"
     filename = f"aggregated{"_features" if not raw else "_raw"}_{window_size}_{overlap}.csv"

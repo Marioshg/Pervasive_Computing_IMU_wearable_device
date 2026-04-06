@@ -14,7 +14,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix
 from collections import Counter
-from dataPreprocessing.aggregate import get_aggregate
+
+import pandas as pd
 
 # --- CONFIG ---
 DATA_FOLDER = os.path.abspath("./data")
@@ -23,8 +24,13 @@ SAMPLE_SEED = 42
 
 # --- 2. LOAD DATA ---
 
-# Load aggregated DataFrame using format_data.py
-df_all = get_aggregate(DATA_FOLDER, raw=False, window_size=100, overlap=25)
+# Load aggregated DataFrame using aggregate.py
+# df_all = get_aggregate(DATA_FOLDER, raw=False, window_size=100, overlap=25)
+
+# run aggregate.py to generate aggregate file
+aggregate_file = 'aggregated_features_100_25.csv'
+
+df_all = pd.read_csv(os.path.join(DATA_FOLDER, aggregate_file))
 
 # Separate features and labels
 X = df_all.drop(columns=["label"])
