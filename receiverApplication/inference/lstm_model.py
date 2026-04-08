@@ -7,8 +7,8 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
 class LSTM:
-    MODEL_LOCATION = os.path.join("..", "tf-lite", "model.h5")
-    TRAINING_LOCATION = os.path.join("..", "data", "aggregated.csv")
+    MODEL_LOCATION = os.path.join("..", "..", "tf-lite", "model.h5")
+    TRAINING_LOCATION = os.path.join("..", "..", "data", "aggregated.csv")
 
     model = None
 
@@ -25,7 +25,7 @@ class LSTM:
         Call this if you want to reset the labels,
         but these should normally be the same as the hardcoded ones
         '''
-        df = pd.read_csv('../data/aggregated.csv')
+        df = pd.read_csv(LSTM.TRAINING_LOCATION)
         y = df.iloc[:, 0].values
         le = LabelEncoder()
         y = le.fit_transform(y)
@@ -33,7 +33,8 @@ class LSTM:
 
     @staticmethod
     def predict(data):
-        df = pd.DataFrame(data)
+        df = pd.DataFrame(data).to_numpy()
         df = df.reshape(-1, 100, 6)
-        predictions = LSTM.model.predict(df)
-        return LSTM.labels[tf.argmax(predictions)]
+        predictions = LSTM.model(df)
+        idx = int(tf.argmax(predictions, axis=-1).numpy()[0])
+        return LSTM.labels[idx]

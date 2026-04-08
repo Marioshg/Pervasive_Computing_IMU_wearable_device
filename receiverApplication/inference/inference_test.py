@@ -8,7 +8,7 @@ class InferenceTest:
 
     @staticmethod
     def load_data():
-        df = pd.read_csv("../data/aggregated.csv")
+        df = pd.read_csv("../../data/aggregated.csv")
         X_flat = df.iloc[:, 1:].values
         InferenceTest.X = X_flat.reshape(-1, 100, 6)
 
@@ -23,8 +23,12 @@ class InferenceTest:
         InferenceTest.load_data()
         inference = InferenceFactory.lstm(data_provider=InferenceTest.data_provider)
         inference.start()
+        idx = 0
         while True:
-            print(inference.getGesture())
+            prediction = inference.getGesture()
+            if prediction is not None:
+                print(f"{idx} : {prediction}")
+            idx += 1
 
 if __name__ == "__main__":
     InferenceTest.test()

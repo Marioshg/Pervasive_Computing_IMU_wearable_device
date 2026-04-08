@@ -4,7 +4,7 @@ import threading
 import copy
 
 class Inference:
-    MIN_DELAY = 0.001
+    MIN_DELAY = 0.01
     TIMEOUT = 2
 
     def __init__(self, data_provider=None, model_function=None, queue_size=1):
@@ -27,7 +27,7 @@ class Inference:
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
         try:
-            self._loop.run_until_complete(self._runner)
+            self._loop.run_until_complete(self._runner())
         finally:
             self._loop.close()
             self._loop = None
