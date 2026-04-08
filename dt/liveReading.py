@@ -1,13 +1,14 @@
 import pickle
 import numpy as np
+import pandas as pd
 from collections import deque
 from dataPreprocessing.imusignal import extract_features
 from dataCollection.IMUReadings import IMUReader
 import time
 
-# Load the trained model
-model = pickle.load(open("model.pkl", "rb"))
-
+# Load the trained model and scaler
+model = pickle.load(open("dt/model.pkl", "rb"))
+scaler = pickle.load(open("dt/scaler.pkl", "rb"))
 # Parameters from training
 window_size = 100
 overlap = 25
@@ -18,7 +19,6 @@ prediction_queue = deque(maxlen=10)  # Keep last 10 predictions
 
 # Buffer to accumulate raw IMU data
 buffer = []
-
 # Initialize IMU reader
 reader = IMUReader()
 reader.start()
@@ -54,8 +54,13 @@ try:
                 # Extract features from the window
                 features = extract_features(window)
 
+                # Scale the features with proper column names
+                columns = [f'col_{i}' for i in range(len(features))]
+                features_df = pd.DataFrame([features], columns=columns)
+                features_scaled = scaler.transform(features_df)
+
                 # Make prediction
-                prediction = model.predict([features])[0]
+                prediction = model.predict(features_scaled)[0]
 
                 # Add to queue
                 prediction_queue.append(prediction)
