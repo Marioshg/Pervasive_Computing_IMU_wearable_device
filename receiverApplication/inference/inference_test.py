@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from inference_factory import InferenceFactory
 
 class InferenceTest:
@@ -8,7 +9,8 @@ class InferenceTest:
 
     @staticmethod
     def load_data():
-        df = pd.read_csv("../../data/aggregated.csv")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        df = pd.read_csv(os.path.join(current_dir, "..", "..", "data", "aggregated.csv"))
         X_flat = df.iloc[:, 1:].values
         InferenceTest.X = X_flat.reshape(-1, 100, 6)
 

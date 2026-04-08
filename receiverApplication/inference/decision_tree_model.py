@@ -2,6 +2,7 @@ import pickle
 from pyexpat import model
 import pandas as pd
 from collections import deque
+
 from dataPreprocessing.imusignal import extract_features
 
 class DecisionTree:
