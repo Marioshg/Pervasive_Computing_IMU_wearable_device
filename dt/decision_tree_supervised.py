@@ -5,6 +5,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pickle
+import sys
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -14,6 +15,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix
 from collections import Counter
+from dataPreprocessing.aggregate import get_aggregate
 
 import pandas as pd
 
@@ -25,12 +27,12 @@ SAMPLE_SEED = 42
 # --- 2. LOAD DATA ---
 
 # Load aggregated DataFrame using aggregate.py
-# df_all = get_aggregate(DATA_FOLDER, raw=False, window_size=100, overlap=25)
+df_all = get_aggregate(DATA_FOLDER, raw=False, window_size=100, overlap=25)
 
 # run aggregate.py to generate aggregate file
-aggregate_file = 'aggregated_features_100_25.csv'
+#aggregate_file = 'aggregated_features_100_25.csv'
 
-df_all = pd.read_csv(os.path.join(DATA_FOLDER, aggregate_file))
+#df_all = pd.read_csv(os.path.join(DATA_FOLDER, aggregate_file))
 
 # Separate features and labels
 X = df_all.drop(columns=["label"])
