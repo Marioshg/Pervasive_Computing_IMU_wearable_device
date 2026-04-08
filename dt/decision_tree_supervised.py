@@ -103,6 +103,12 @@ print(classification_report(y_test, y_pred))
 with open("model.pkl", "wb") as f:
     pickle.dump(best_model, f)
 
+# Save the scaler
+with open("scaler.pkl", "wb") as f:
+    pickle.dump(scaler, f)
+
+print("Scaler saved to scaler.pkl")
+
 print("Model size (bytes):", os.path.getsize("model.pkl"))
 
 # --PLOT FEAUTURE IMPORTANCE--
