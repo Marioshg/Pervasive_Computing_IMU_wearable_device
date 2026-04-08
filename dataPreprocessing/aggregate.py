@@ -1,5 +1,6 @@
-from utility import DataOrganiser
-from imusignal import IMUSignal
+from dataPreprocessing.utility import DataOrganiser
+from dataPreprocessing.imusignal import from_csv, get_feature_windows, get_raw_windows
+
 import pandas as pd
 import numpy as np
 import math
@@ -40,12 +41,12 @@ def process_gesture(files: list[str], raw, window_size, overlap) -> list:
     for file in files:
         # get the signal, make sure its length is divisible by 100
         expected_size = 200 if 'fast' in file else 300
-        signal = IMUSignal.from_file(file, expected_size=expected_size)
+        signal = from_csv(file, expected_size=expected_size)
         
         if raw:
-            windowed = signal.get_raw_windows(window_size, overlap, flatten=True)
+            windowed = get_raw_windows(signal, window_size, overlap, flatten=True)
         else:
-            windowed = signal.get_feature_windows(window_size, overlap)
+            windowed = get_feature_windows(signal, window_size, overlap)
         
         items += windowed.tolist()
     return items
@@ -85,7 +86,7 @@ def build_dataframe(data: dict) -> pd.DataFrame:
 
     return df
 
-def get_data(data_folder: str, raw=True, window_size=100, overlap=0) -> pd.DataFrame:
+def get_aggregate(data_folder: str, raw=True, window_size=100, overlap=0) -> pd.DataFrame:
     organiser = DataOrganiser(data_folder)
     organiser.printInfo()
 
@@ -103,12 +104,13 @@ def get_data(data_folder: str, raw=True, window_size=100, overlap=0) -> pd.DataF
 if __name__ == "__main__":
     window_size = 100
     overlap = 25
-    raw = True
+    raw = False
     
     data_folder = "data"
-    filename = f"aggregated{"_features" if not raw else "_raw"}_{window_size}_{overlap}.csv"
+    suffix = "_features" if not raw else "_raw"
+    filename = f"aggregated{suffix}_{window_size}_{overlap}.csv"
     path = os.path.join(data_folder, filename)
-    df = get_data(data_folder, raw, window_size, overlap)
+    df = get_aggregate(data_folder, raw, window_size, overlap)
     df.to_csv(path, index=False)
     print(f"Saved data to {path}")
     

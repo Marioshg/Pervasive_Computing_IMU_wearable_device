@@ -1,8 +1,7 @@
 from os import listdir
-from os.path import isfile, join, basename
+from os.path import isfile, join, basename, abspath
 from os import walk
 import re
-
 
 def getUsers(path="data"):
 	""""
@@ -30,9 +29,24 @@ def sortByGesture(recordings):
 
 	return gestureDict
 
+def remapGestures(recordingDictByGesture: dict, mapping: dict) -> dict:
+	'''
+	Provide a new dictionary that is joined on the given mapping
+	'''
+
+	new_data = {}
+	old_data = recordingDictByGesture
+	for label in mapping:
+		new_data[label] = []
+		old_labels = mapping[label]
+		for name in old_labels:
+			new_data[label] += (old_data[name])
+	return new_data
 
 class DataOrganiser:
-	def __init__(self, baseFolder="data"):
+	def __init__(self, baseFolder=abspath("data")):
+		print(f"Loading data from the directory {baseFolder}")
+     
 		self.baseFolder = baseFolder
 
 		self.users = getUsers(path=baseFolder)
@@ -93,21 +107,9 @@ class Mappings:
 				 'behind_left_return', 'behind_left_fast_return', 'get_up', 'behind_right', 'shake_rightleft_return',
 				 'shake_rightleft_fast', 'shake_leftright', 'look_around', 'shake_leftright_fast', 'jump',
 				 'shake_rightleft', 'walk', 'shake_rightleft_fast_return', 'behind_left_fast']
-	}
+	}  
+    
 
-def remapGestures(recordingDictByGesture: dict, mapping: dict) -> dict:
-	'''
-	Provide a new dictionary that is joined on the given mapping
-	'''
-
-	new_data = {}
-	old_data = recordingDictByGesture
-	for label in mapping:
-		new_data[label] = []
-		old_labels = mapping[label]
-		for name in old_labels:
-			new_data[label] += (old_data[name])
-	return new_data
 
 
 if __name__ == "__main__":
