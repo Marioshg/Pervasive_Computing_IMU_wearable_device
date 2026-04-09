@@ -2,3 +2,4 @@ confusion_matrix.png
 .gitignore
 model.pkl
 __pycache__/
+data/aggregated.csv

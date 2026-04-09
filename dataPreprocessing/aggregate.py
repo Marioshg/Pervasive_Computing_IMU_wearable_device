@@ -107,7 +107,8 @@ if __name__ == "__main__":
     raw = False
     
     data_folder = "data"
-    filename = f"aggregated{"_features" if not raw else "_raw"}_{window_size}_{overlap}.csv"
+    suffix = "_features" if not raw else "_raw"
+    filename = f"aggregated{suffix}_{window_size}_{overlap}.csv"
     path = os.path.join(data_folder, filename)
     df = get_aggregate(data_folder, raw, window_size, overlap)
     df.to_csv(path, index=False)
