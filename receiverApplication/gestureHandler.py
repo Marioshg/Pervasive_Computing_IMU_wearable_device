@@ -49,9 +49,6 @@ class GestureMapping:
 			gw.getWindowsWithTitle(self.target)[0].activate()
 			pyautogui.press(newInput)
 
-		# currentActive = gw.getActiveWindow()
-		# currentActive.activate()
-
 class Manager:
 	def __init__(self, mapping, model):
 		self.model = model
