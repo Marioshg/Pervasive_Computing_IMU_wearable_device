@@ -1,9 +1,18 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import pickle
 from pyexpat import model
 import pandas as pd
 from collections import deque
+import sys
+from pathlib import Path
 
-from dataPreprocessing.imusignal import extract_features
+# Go: current file → ../receiverApplication → ../root/dataPreprocessing
+imusignal_dir = Path(__file__).resolve().parents[2] / "dataPreprocessing"
+sys.path.append(str(imusignal_dir))
+
+from imusignal import extract_features
 
 class DecisionTree:
 
@@ -16,9 +25,6 @@ class DecisionTree:
         DecisionTree.model = pickle.load(open("dt/model.pkl", "rb"))
         DecisionTree.scaler = pickle.load(open("dt/scaler.pkl", "rb"))
 
-    @staticmethod
-    def preprocess(data):
-        pass
 
     @staticmethod
     def predict(data):
@@ -26,12 +32,9 @@ class DecisionTree:
         Data is already windowed.
         Return the prediction.
         '''
-        #window= wnindowInput()
-
-        input = DecisionTree.preprocess(data)
 
         # Extract features from the window
-        features = extract_features(window)
+        features = extract_features(data)
         # Scale the features with proper column names
         columns = [f'col_{i}' for i in range(len(features))]
         features_df = pd.DataFrame([features], columns=columns)

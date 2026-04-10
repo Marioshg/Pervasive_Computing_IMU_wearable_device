@@ -23,7 +23,7 @@ class InferenceTest:
     @staticmethod
     def test():
         InferenceTest.load_data()
-        inference = InferenceFactory.lstm(data_provider=InferenceTest.data_provider)
+        inference = InferenceFactory.decision_tree(data_provider=InferenceTest.data_provider)
         inference.start()
         idx = 0
         while True:
