@@ -144,7 +144,9 @@ class IMUWindower:
         no new window is ready yet. Never blocks.
         """
         try:
-            return self._window_q.get_nowait()
+            data: pd.DataFrame = self._window_q.get_nowait()
+    
+            return data.to_numpy()
         except queue.Empty:
             return None
     
