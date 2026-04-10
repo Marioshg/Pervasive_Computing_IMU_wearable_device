@@ -46,7 +46,7 @@ class LSTM:
 
     @staticmethod
     def predict(data):
-        df = pd.DataFrame(data).to_numpy()
+        df = pd.DataFrame(data).to_numpy(dtype=np.float32)
         df = df.reshape(-1, 100, 6)
         predictions = LSTM._infer(df)
         idx = int(tf.argmax(predictions, axis=-1).numpy()[0])

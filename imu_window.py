@@ -114,12 +114,13 @@ class IMUWindower:
                     break
 
             new_data = pd.DataFrame(batch, columns=self.columns)
+            new_data = new_data.drop(columns='timestamp')
             self._roll_process_window(new_data)
 
 
     def _roll_process_window(self, new_data: pd.DataFrame):
         """Appends the data to the internal buffer. If the buffer contains enough data 
-        for the next window, the window is emitted (added to the output queue). 
+        for the next window, the window is emitted (added to the output queue). ti
         If the buffer contains multiple windows after appending new data, it emits all of them."""
         self._buffer = pd.concat([self._buffer, new_data], ignore_index=True)
         self._current_step += len(new_data)
@@ -145,8 +146,8 @@ class IMUWindower:
         """
         try:
             data: pd.DataFrame = self._window_q.get_nowait()
-    
-            return data.to_numpy()
+            data = data.drop(columns='timestamp')
+            return data
         except queue.Empty:
             return None
     
