@@ -1,5 +1,7 @@
 import asyncio
 from bleak import BleakClient, BleakScanner
+# from ble_simulator import SimBleakClient as BleakClient
+# from ble_simulator import SimBleakScanner as BleakScanner
 import threading
 import time
 import pandas as pd
@@ -46,6 +48,7 @@ class IMUWindower:
         try:
             values = list(map(float, data.decode("utf-8").strip().split(",")))
             row = dict(zip(reader.columns, values))
+            
             reader._raw_q.put(row)
         except Exception as e:
             print("Parse error:", e)
@@ -125,7 +128,7 @@ class IMUWindower:
         self._buffer = pd.concat([self._buffer, new_data], ignore_index=True)
         self._current_step += len(new_data)
 
-        while self._current_step >= self.window_size:
+        if self._current_step >= self.window_size:
             window = self._buffer.iloc[:self.window_size].copy() # 
 
             try:
@@ -133,11 +136,12 @@ class IMUWindower:
                 self._window_q.get_nowait()
             except queue.Empty:
                 pass
-                
+            
+            print("window!")
             self._window_q.put_nowait(window)
 
             self._buffer = self._buffer.iloc[self.window_step:].reset_index(drop=True) # trim the buffer
-            self._current_step -= self.window_size # reset the index
+            self._current_step -= self.window_step # reset the index
 
     def get_window(self) -> pd.DataFrame | None:
         """
@@ -188,7 +192,7 @@ if __name__ == "__main__":
     device_uuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
     device_name = "BLE Server Example"
     
-    imu = IMUWindower(device_uuid, device_name, window_size=100, window_overlap=25)
+    imu = IMUWindower(device_uuid, device_name, window_size=100, window_overlap=99)
     imu.start()
 
     if not imu.wait_until_connected(timeout=10.0):
