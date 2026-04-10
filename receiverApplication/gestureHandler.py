@@ -8,6 +8,11 @@ import tkinter as tk
 
 import sys
 
+from pathlib import Path
+
+root_dir = Path(__file__).resolve().parent.parent
+sys.path.append(str(root_dir))
+
 from imu_window import IMUWindower
 
 from receiverApplication.inference.inference_factory import InferenceFactory
