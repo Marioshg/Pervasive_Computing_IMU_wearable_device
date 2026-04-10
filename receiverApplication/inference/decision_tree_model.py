@@ -35,10 +35,10 @@ class DecisionTree:
         '''
 
         # Extract features from the window
-        df = pd.DataFrame(data)
-        df = df.to_numpy(dtype=np.float32)
-        df = df.reshape(100, 6)
-        features = extract_features(df)
+        #df = pd.DataFrame(data)
+        #df = df.to_numpy(dtype=np.float32)
+        #df = df.reshape(100, 6)
+        features = extract_features(data)
         # Scale the features with proper column names
         columns = [f'col_{i}' for i in range(len(features))]
         features_df = pd.DataFrame([features], columns=columns)

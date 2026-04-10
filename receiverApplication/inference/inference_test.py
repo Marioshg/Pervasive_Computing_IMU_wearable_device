@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from inference_factory import InferenceFactory
+from .inference_factory import InferenceFactory
 
 class InferenceTest:
 
