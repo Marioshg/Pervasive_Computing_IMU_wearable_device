@@ -1,5 +1,5 @@
 from lstm_model import LSTM
-# from decision_tree_model import DecisionTree
+from decision_tree_model import DecisionTree
 from inference import Inference
 
 class InferenceFactory:
@@ -16,11 +16,11 @@ class InferenceFactory:
             queue_size=queue_size
         )
 
-    # @staticmethod
-    # def decision_tree(data_provider=None, queue_size=1):
-    #     DecisionTree.setup()
-    #     return Inference(
-    #         data_provider=data_provider,
-    #         model_function=DecisionTree.predict,
-    #         queue_size=queue_size
-    #     )
+    @staticmethod
+    def decision_tree(data_provider=None, queue_size=1):
+        DecisionTree.setup()
+        return Inference(
+            data_provider=data_provider,
+            model_function=DecisionTree.predict,
+            queue_size=queue_size
+        )
