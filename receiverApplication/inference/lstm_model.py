@@ -50,4 +50,5 @@ class LSTM:
         df = df.reshape(-1, 100, 6)
         predictions = LSTM._infer(df)
         idx = int(tf.argmax(predictions, axis=-1).numpy()[0])
-        return LSTM.labels[idx]
+        result = LSTM.labels[idx]
+        return result

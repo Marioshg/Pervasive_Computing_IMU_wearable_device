@@ -52,7 +52,7 @@ class GestureMapping:
 		"""
 		The function responsible for executing gestures
 		"""
-		if gesture is not None and gw.getWindowsWithTitle(self.target) != []:
+		if (gesture is not None and gesture != 'none') and gw.getWindowsWithTitle(self.target) != []:
 			newInput = self.mapping[gesture]
 			gw.getWindowsWithTitle(self.target)[0].activate()
 			pyautogui.press(newInput)
