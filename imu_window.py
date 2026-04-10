@@ -52,17 +52,25 @@ class IMUWindower:
 
     async def _connect(self):
         devices = await BleakScanner.discover()
-        target = next((d for d in devices if d.name == self.device_name), None)
+        target = None
+        for d in devices:
+            if d.name == self.device_name:
+                target = d
+                break
+
         if target is None:
             raise RuntimeError(f"Device '{self.device_name}' not found")
 
         self.client = BleakClient(target.address)
         await self.client.connect()
+
         if not self.client.is_connected:
             raise RuntimeError("Failed to connect")
 
         self._connected_event.set()
         print(f"Connected to {target.name} ({target.address})")
+
+        print("Set notification handler for BLE characteristic")
         await self.client.start_notify(self.device_uuid, IMUWindower._notification_handler)
 
     async def _ble_runner(self):
@@ -162,18 +170,22 @@ class IMUWindower:
             self._accumulator_thread.join(timeout=3.0)
 
     def wait_until_connected(self, timeout=5.0):
-        if self._connected_event.wait(timeout=timeout):
-            return True
-        if self._failed_event.is_set():
-            raise RuntimeError("BLE connection failed")
-        return False
+        while True:
+            if self._connected_event.wait(timeout=timeout):
+                return True
+            if self._failed_event.is_set():
+                raise RuntimeError(f"BLE connection failed")
+            if timeout is not None:
+                timeout -= 0.05
+                if timeout <= 0:
+                    return False
     
 
 if __name__ == "__main__":
     device_uuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
     device_name = "BLE Server Example"
     
-    imu = IMUWindower(device_name, device_uuid, window_size=100, window_overlap=25)
+    imu = IMUWindower(device_uuid, device_name, window_size=100, window_overlap=25)
     imu.start()
 
     if not imu.wait_until_connected(timeout=10.0):

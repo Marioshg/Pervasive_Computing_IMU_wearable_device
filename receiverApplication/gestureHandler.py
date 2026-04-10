@@ -7,7 +7,10 @@ import pyautogui
 import tkinter as tk
 
 import sys
-sys.path.append('../')
+
+from imu_window import IMUWindower
+
+from receiverApplication.inference.inference_factory import InferenceFactory
 from dataCollection.IMUReadings import IMUReader
 
 
@@ -163,14 +166,42 @@ class AppGui:
 			self.root.update()
 
 
-if __name__ == "__main__":
-	# Connect with the BLE server
-	# imu = IMUReader()
-	# imu.start()
-	# imu.wait_until_connected()
+def startImuWindower():
+	device_uuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+	device_name = "BLE Server Example"
 
-	imu = DummyConnection()
-	model = DummyModel(imu)
+	imu = IMUWindower(device_uuid, device_name, window_size=100, window_overlap=25)
+	imu.start()
+
+	if not imu.wait_until_connected(timeout=30.0):
+		print("Could not connect")
+		imu.stop()
+		exit(1)
+
+	# try:
+	# 	while True:
+	# 		time.sleep(1.0)
+	# except KeyboardInterrupt:
+	# 	print("Shutting down")
+	# 	imu.stop()
+
+	return imu
+
+def startInference(dataProvider):
+	inference = InferenceFactory.lstm(data_provider=dataProvider)
+	inference.start()
+	return inference
+
+if __name__ == "__main__":
+
+	# Dummy test classes
+	# imu = DummyConnection()
+	#
+
+	imu = startImuWindower()
+	# model = DummyModel(imu)
+	model = startInference(dataProvider=imu.get_window)
+
 
 	mapping = GestureMapping(mappingName="Thonny_mapping.json")
 	app = Manager(mapping=mapping, model=model)

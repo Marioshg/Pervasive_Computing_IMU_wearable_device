@@ -1,6 +1,6 @@
-from lstm_model import LSTM
+from receiverApplication.inference.lstm_model import LSTM
 # from decision_tree_model import DecisionTree
-from inference import Inference
+from receiverApplication.inference.inference import Inference
 
 class InferenceFactory:
 
