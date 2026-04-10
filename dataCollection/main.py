@@ -151,12 +151,12 @@ class Recorder:
 
 if __name__ == "__main__":
 	# Connect with the BLE server and start polling for data
-	# imu = IMUReader()
-	# imu.start()
-	# imu.wait_until_connected()
+	imu = IMUReader()
+	imu.start()
+	imu.wait_until_connected()
 
 	# Open the gestures
-	gestureDict = json.load(open("./dataCollection/gestures.json"))
+	gestureDict = json.load(open("gestures.json"))
 
 	# configure and run the recorder
 	r = Recorder(user="User", gestures=gestureDict, dataSource=DummyData())
