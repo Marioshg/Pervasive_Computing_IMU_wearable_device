@@ -1,5 +1,5 @@
-from dataPreprocessing.utility import DataOrganiser
-from dataPreprocessing.imusignal import from_csv, get_feature_windows, get_raw_windows
+from utility import DataOrganiser
+from imusignal import from_csv, get_feature_windows, get_raw_windows
 
 import pandas as pd
 import numpy as np
@@ -103,12 +103,13 @@ def get_aggregate(data_folder: str, raw=True, window_size=100, overlap=0) -> pd.
 
 if __name__ == "__main__":
     window_size = 100
-    overlap = 25
-    raw = False
+    overlap = 0
+    raw = True
     
-    data_folder = "data"
+    data_folder = "../data"
     suffix = "_features" if not raw else "_raw"
-    filename = f"aggregated{suffix}_{window_size}_{overlap}.csv"
+    # filename = f"aggregated{suffix}_{window_size}_{overlap}.csv"
+    filename = "aggregated1.csv"
     path = os.path.join(data_folder, filename)
     df = get_aggregate(data_folder, raw, window_size, overlap)
     df.to_csv(path, index=False)
