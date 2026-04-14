@@ -93,3 +93,11 @@ def get_feature_windows(signal, window_size, overlap):
         features = np.array([extract_features(w) for w in windowed_values])
         
         return features
+
+def diff(signal, columns):
+    output = signal.copy()
+    diffed = signal.diff()
+    diffed = diffed.bfill()
+    for column in columns:
+        output[column] = diffed[column]
+    return output

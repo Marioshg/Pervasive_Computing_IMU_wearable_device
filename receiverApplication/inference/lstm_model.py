@@ -11,7 +11,7 @@ import datetime
 
 class LSTM:
     CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-    MODEL_LOCATION = os.path.join(CURRENT_DIR, "..", "..", "tf-lite", "model.h5")
+    MODEL_LOCATION = os.path.join(CURRENT_DIR, "..", "..", "tf-lite", "model2.h5")
     TRAINING_LOCATION = os.path.join(CURRENT_DIR, "..", "..", "data", "aggregated.csv")
 
     model = None

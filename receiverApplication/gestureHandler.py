@@ -170,12 +170,17 @@ class AppGui:
 
 			self.root.update()
 
+WINDOW_LENGTH = 1000 # ms
+WINDOW_LATENCY = 100 # ms
 
-def startImuWindower():
+WINDOW_SIZE = int(WINDOW_LENGTH / 10)
+WINDOW_OVERLAP = WINDOW_SIZE - int(WINDOW_LATENCY / 10)
+
+def startImuWindower(window_size=WINDOW_SIZE, window_overlap=WINDOW_OVERLAP):
 	device_uuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 	device_name = "BLE Server Example"
 
-	imu = IMUWindower(device_uuid, device_name, window_size=100, window_overlap=25)
+	imu = IMUWindower(device_uuid, device_name, window_size=window_size, window_overlap=window_overlap)
 	imu.start()
 
 	if not imu.wait_until_connected(timeout=30.0):

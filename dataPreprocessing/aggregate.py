@@ -1,5 +1,5 @@
 from utility import DataOrganiser
-from imusignal import from_csv, get_feature_windows, get_raw_windows
+from imusignal import from_csv, get_feature_windows, get_raw_windows, diff
 
 import pandas as pd
 import numpy as np
@@ -20,12 +20,24 @@ def get_mapping() -> dict:
     }
     return labels
 
-def join_on_mapping(organiser: DataOrganiser, mapping: dict) -> dict:
+def get_simple_mapping() -> dict:
+    labels = {
+        'look_left': ['look_left', 'look_left_fast'],
+        'tilt_left': ['tilt_left', 'tilt_left_fast'],
+        'look_right': ['look_right', 'look_right_fast'],
+        'tilt_right': ['tilt_right', 'tilt_right_fast'],
+        'look_up': ['look_up', 'look_up_fast'],
+        'look_down': ['look_down', 'look_down_fast'],
+        'none': ['idle', 'music_beat', 'sit_down', 'nod', 'get_up', 'jump', 'walk']
+    }
+    return labels
+
+def join_on_mapping(data: dict, mapping: dict) -> dict:
     '''
     Provide a new dictionary that is joined on the given mapping
     '''
     new_data = {}
-    old_data = organiser.recordingDictByGesture
+    old_data = data
     for label in mapping:
         new_data[label] = []
         old_labels = mapping[label]
@@ -33,7 +45,7 @@ def join_on_mapping(organiser: DataOrganiser, mapping: dict) -> dict:
             new_data[label] += (old_data[name])
     return new_data
 
-def process_gesture(files: list[str], raw, window_size, overlap) -> list:
+def process_gesture(files: list[str], raw, window_size, overlap, differentiate=False) -> list:
     '''
     Process a single gesture; expects a list of CSV files
     '''
@@ -42,7 +54,10 @@ def process_gesture(files: list[str], raw, window_size, overlap) -> list:
         # get the signal, make sure its length is divisible by 100
         expected_size = 200 if 'fast' in file else 300
         signal = from_csv(file, expected_size=expected_size)
-        
+
+        if differentiate:
+            signal = diff(signal, columns=['x_gyro', 'y_gyro', 'z_gyro'])
+
         if raw:
             windowed = get_raw_windows(signal, window_size, overlap, flatten=True)
         else:
@@ -51,27 +66,28 @@ def process_gesture(files: list[str], raw, window_size, overlap) -> list:
         items += windowed.tolist()
     return items
 
-def process_gestures(data_files: dict, raw, window_size, overlap) -> dict:
+def process_gestures(data_files: dict, raw, window_size, overlap, differentiate=False, trim=True) -> dict:
     data = {}
     length = None
     for gesture, files in data_files.items():
-        values = process_gesture(files, raw, window_size, overlap)
+        values = process_gesture(files, raw, window_size, overlap, differentiate=differentiate)
         data[gesture] = values
         
         # keep the smallest number of samples
         if length is None or len(values) < length:
             length = len(values)
 
-    # ensure all gestures have the same length
-    for gesture in data.keys():
-        values = data[gesture]
-        if len(values) == length:
-            continue
-        # use pandas data frame sampling to ensure correct size
-        # sampling is randomized, so should be ok
-        df = pd.DataFrame(values)
-        df = df.sample(n=length, random_state=SAMPLE_SEED)
-        data[gesture] = df.to_numpy().tolist()
+    if trim:
+        # ensure all gestures have the same length
+        for gesture in data.keys():
+            values = data[gesture]
+            if len(values) == length:
+                continue
+            # use pandas data frame sampling to ensure correct size
+            # sampling is randomized, so should be ok
+            df = pd.DataFrame(values)
+            df = df.sample(n=length, random_state=SAMPLE_SEED)
+            data[gesture] = df.to_numpy().tolist()
 
     return data
 
@@ -86,15 +102,16 @@ def build_dataframe(data: dict) -> pd.DataFrame:
 
     return df
 
-def get_aggregate(data_folder: str, raw=True, window_size=100, overlap=0) -> pd.DataFrame:
+def get_aggregate(data_folder: str, raw=True, window_size=100, overlap=0, differentiate=False, simple=False, trim=True) -> pd.DataFrame:
     organiser = DataOrganiser(data_folder)
     organiser.printInfo()
+    data = organiser.recordingDictByGesture
 
-    mapping = get_mapping()
-    data_files = join_on_mapping(organiser, mapping)
+    mapping = get_simple_mapping() if simple else get_mapping()
+    data_files = join_on_mapping(data, mapping)
     print(f'Mapped found files to gestures')
 
-    gestures = process_gestures(data_files, raw, window_size, overlap)
+    gestures = process_gestures(data_files, raw, window_size, overlap, differentiate=differentiate, trim=trim)
     df = None
     df = build_dataframe(gestures)
     print(f'Built data frame with {len(df)} entries from gesture data')
@@ -103,15 +120,15 @@ def get_aggregate(data_folder: str, raw=True, window_size=100, overlap=0) -> pd.
 
 if __name__ == "__main__":
     window_size = 100
-    overlap = 0
+    overlap = 85
     raw = True
     
     data_folder = "data"
     suffix = "_features" if not raw else "_raw"
     # filename = f"aggregated{suffix}_{window_size}_{overlap}.csv"
-    filename = "aggregated.csv"
+    filename = "aggregated2.csv"
     path = os.path.join(data_folder, filename)
-    df = get_aggregate(data_folder, raw, window_size, overlap)
+    df = get_aggregate(data_folder, raw, window_size, overlap, simple=True, trim=False)
     df.to_csv(path, index=False)
     print(f"Saved data to {path}")
     

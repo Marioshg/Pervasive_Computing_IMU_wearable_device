@@ -8,6 +8,7 @@ import pandas as pd
 
 import queue
 
+from dataPreprocessing.imusignal import diff
 
 class IMUWindower:
     _current_reader = None
@@ -137,19 +138,20 @@ class IMUWindower:
             except queue.Empty:
                 pass
             
-            print("window!")
             self._window_q.put_nowait(window)
 
             self._buffer = self._buffer.iloc[self.window_step:].reset_index(drop=True) # trim the buffer
             self._current_step -= self.window_step # reset the index
 
-    def get_window(self) -> pd.DataFrame | None:
+    def get_window(self, differentiate=False) -> pd.DataFrame | None:
         """
         Returns the next window or None if
         no new window is ready yet. Never blocks.
         """
         try:
             data: pd.DataFrame = self._window_q.get_nowait()
+            if differentiate:
+                data = diff(data, columns=['x_gyro', 'y_gyro', 'z_gyro'])
             data = data.drop(columns='timestamp')
             return data
         except queue.Empty:
