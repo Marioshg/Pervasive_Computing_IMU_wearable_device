@@ -5,7 +5,8 @@ import time
 import pygetwindow as gw
 import pyautogui
 import tkinter as tk
-
+from collections import deque, Counter
+import time
 import sys
 
 from pathlib import Path
@@ -28,7 +29,7 @@ class DummyModel:
 
 		self.connection = connection
 		self.helloWorld = ["look_left", "look_right", "look_up", "look_up", "look_down", "tilt_left", "look_down",
-		                   "tilt_right", "look_up", "extra_value_to_complete_hello_world"]
+						   "tilt_right", "look_up", "extra_value_to_complete_hello_world"]
 		self.cnt = 0
 
 	def getGesture(self):
@@ -57,15 +58,93 @@ class GestureMapping:
 			gw.getWindowsWithTitle(self.target)[0].activate()
 			pyautogui.press(newInput)
 
+class GestureSmoother:
+    def __init__(
+        self,
+        min_count=3,
+        timeframe_s=0.7,
+        cooldown_s=0.8,
+        require_neutral_between_opposites=True,
+        ignore_classes=None,
+        opposites=None,
+    ):
+        self.min_count = min_count
+        self.timeframe_s = timeframe_s
+        self.cooldown_s = cooldown_s
+        self.require_neutral_between_opposites = require_neutral_between_opposites
+        self.ignore_classes = set(ignore_classes or ["none"])
+
+        self.opposites = opposites or {
+            "look_up": "look_down",
+            "look_down": "look_up",
+            "look_left": "look_right",
+            "look_right": "look_left",
+            "tilt_left": "tilt_right",
+            "tilt_right": "tilt_left",
+        }
+
+        self.events = deque()
+        self.last_emitted_gesture = None
+        self.last_emit_time = 0.0
+        self.neutral_seen_since_last_event = True
+
+    def update(self, gesture):
+        now = time.monotonic()
+
+        if gesture is None:
+            return None
+
+        self.events.append((now, gesture))
+
+        cutoff = now - self.timeframe_s
+        while self.events and self.events[0][0] < cutoff:
+            self.events.popleft()
+
+        if gesture in self.ignore_classes:
+            self.neutral_seen_since_last_event = True
+            return None
+
+        counts = Counter(g for _, g in self.events if g not in self.ignore_classes)
+
+        if counts[gesture] < self.min_count:
+            return None
+
+        if (
+            self.last_emitted_gesture == gesture
+            and (now - self.last_emit_time) < self.cooldown_s
+        ):
+            return None
+
+        if self.require_neutral_between_opposites:
+            opposite_of_last = self.opposites.get(self.last_emitted_gesture)
+            if (
+                gesture == opposite_of_last
+                and not self.neutral_seen_since_last_event
+            ):
+                return None
+
+        self.last_emitted_gesture = gesture
+        self.last_emit_time = now
+        self.neutral_seen_since_last_event = False
+        self.events.clear()
+        return gesture
+
 class Manager:
-	def __init__(self, mapping, model):
+	def __init__(self, mapping, model, smoother=None):
 		self.model = model
 		self.mapping = mapping
+		self.smoother = smoother
 
 	def getGesture(self):
-		newGesture = self.model.getGesture()
-		self.mapping.executeGesture(newGesture)
-		return newGesture
+		raw_gesture = self.model.getGesture()
+
+		if self.smoother is not None:
+			detected_gesture = self.smoother.update(raw_gesture)
+		else:
+			detected_gesture = raw_gesture
+
+		self.mapping.executeGesture(detected_gesture)
+		return detected_gesture
 
 	def isTargetRunning(self):
 		return True if (gw.getWindowsWithTitle(self.mapping.target) != []) else False
@@ -171,7 +250,7 @@ class AppGui:
 			self.root.update()
 
 WINDOW_LENGTH = 1000 # ms
-WINDOW_LATENCY = 100 # ms
+WINDOW_LATENCY = 50 # ms
 
 WINDOW_SIZE = int(WINDOW_LENGTH / 10)
 WINDOW_OVERLAP = WINDOW_SIZE - int(WINDOW_LATENCY / 10)
@@ -214,7 +293,15 @@ if __name__ == "__main__":
 
 
 	mapping = GestureMapping(mappingName="Thonny_mapping.json")
-	app = Manager(mapping=mapping, model=model)
+
+	smoother = GestureSmoother(
+		min_count=8,
+		timeframe_s=0.7,
+		cooldown_s=1.2,
+		ignore_classes=["none"],
+	)
+
+	app = Manager(mapping=mapping, model=model, smoother=smoother)
 
 	g = AppGui(app)
 	g.applicationLoop()
